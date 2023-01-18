@@ -13,5 +13,5 @@ include:
 
 test:check-shell-formatting:
   before_script:
-    - SHELL_SCRIPTS=/dev/null
+    - SHELL_SCRIPTS="gen/app-gen src/app"
 

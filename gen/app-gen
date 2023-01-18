@@ -1,0 +1,307 @@
+#!/bin/bash
+
+set -e
+
+show_help() {
+    cat << EOF
+
+Simple tool to generate Mender Artifact suitable for App Update Module
+
+Usage: $0 [options] [-- [options-for-mender-artifact] ]
+
+    Options: [ -n|--artifact-name -t|--device-type -o|--output_path --i|--image -p|--platform -r|--orchestrator -m|--manifests-dir -h|--help -a|--application-name ]
+
+        --artifact-name     - Artifact name
+        --device-type       - Target device type identification (can be given more than once)
+        --output-path       - Path to output artifact file. Default: reboot-artifact.mender
+        --image [current-url,]new-url       - Path to output artifact file. Default: reboot-artifact.mender
+        --manifests-dir     - Directory containing orchestrator-specific manifests describing the deployment
+        --platform          - Platform of the images, e.g.: linux/arm/v7
+        --orchestrator      - Name of the orchestrator, and name of the sub-module, e.g.: docker-compose
+        --application-name  - Name of the application running on a device
+        --help              - Show help and exit
+
+Anything after a '--' gets passed directly to the mender-artifact tool.
+
+EOF
+}
+
+show_help_and_exit_error() {
+    show_help
+    exit 1
+}
+
+check_dependency() {
+    if ! which "$1" > /dev/null; then
+        echo "The $1 utility is not found but required to generate Artifacts." 1>&2
+        return 1
+    fi
+}
+
+if ! check_dependency mender-artifact; then
+    echo "Please follow the instructions here to install mender-artifact and then try again: https://docs.mender.io/downloads#mender-artifact" 1>&2
+    exit 1
+fi
+
+delta_cmd="xdelta3 -e -s"
+device_types=""
+artifact_name=""
+output_path="app-artifact.mender"
+passthrough=0
+passthrough_args=""
+version="1.0"
+orchestrator=""
+platform=""
+manifests_dir=""
+declare -a images
+declare -a images_sha
+declare -a images_ids
+
+while [ -n "$1" ]; do
+    if test $passthrough -eq 1; then
+        passthrough_args="$passthrough_args $1"
+        shift
+        continue
+    fi
+    case "$1" in
+        --application-name | -a)
+            if [ -z "$2" ]; then
+                show_help_and_exit_error
+            fi
+            if [[ $application_name =~ [^a-zA-Z0-9_-] ]]; then
+                echo "ERROR: application name must contain only alpha-numerics, _ or -"
+                show_help_and_exit_error
+            fi
+            application_name="$2"
+            shift 2
+            ;;
+        --manifests-dir | -r)
+            if [ -z "$2" ]; then
+                show_help_and_exit_error
+            fi
+            manifests_dir="$2"
+            shift 2
+            ;;
+        --orchestrator | -r)
+            if [ -z "$2" ]; then
+                show_help_and_exit_error
+            fi
+            orchestrator="$2"
+            shift 2
+            ;;
+        --platform | -p)
+            if [ -z "$2" ]; then
+                show_help_and_exit_error
+            fi
+            platform="$2"
+            shift 2
+            ;;
+        --image | -i)
+            # --image docker.io/library/debian:11,docker.io/library/debian:latest@sha256:a94cd7c7d58f483affd5937853ad4d24caa18cd7c2ec9ef65a9e528dfbc5eb07 --image docker.io/library/postgres:15.1
+            if [ -z "$2" ]; then
+                show_help_and_exit_error
+            fi
+            images+=($(echo "$2" | cut -f1 -d,)) # current
+            images+=($(echo "$2" | cut -f2 -d,)) # new, if current!=new then we need to generate delta.
+            shift 2
+            ;;
+        --device-type | -t)
+            if [ -z "$2" ]; then
+                show_help_and_exit_error
+            fi
+            device_types="$device_types $1 $2"
+            shift 2
+            ;;
+        --artifact-name | -n)
+            if [ -z "$2" ]; then
+                show_help_and_exit_error
+            fi
+            artifact_name=$2
+            shift 2
+            ;;
+        --output-path | -o)
+            if [ -z "$2" ]; then
+                show_help_and_exit_error
+            fi
+            output_path=$2
+            shift 2
+            ;;
+        -h | --help)
+            show_help
+            exit 0
+            ;;
+        --)
+            passthrough=1
+            shift
+            ;;
+        -*)
+            echo "Error: unsupported option $1"
+            show_help_and_exit_error
+            ;;
+        *)
+            shift
+            ;;
+    esac
+done
+
+if [ -z "${artifact_name}" ]; then
+    echo "Artifact name not specified. Aborting."
+    show_help_and_exit_error
+fi
+
+if [ -z "${device_types}" ]; then
+    echo "Device type not specified. Aborting."
+    show_help_and_exit_error
+fi
+
+if [ -z "${orchestrator}" ]; then
+    echo "Orchestrator not specified. Aborting."
+    show_help_and_exit_error
+fi
+
+if [ -z "${platform}" ]; then
+    echo "Platform not specified. Aborting."
+    show_help_and_exit_error
+fi
+
+if [ -z "${manifests_dir}" ]; then
+    echo "Directory containing manifests not specified. Aborting."
+    show_help_and_exit_error
+fi
+
+if [ ${#images[@]} -lt 1 ]; then
+    echo "No images specified. Aborting."
+    show_help_and_exit_error
+fi
+
+temp_dir=$(mktemp -d)
+[[ "${temp_dir}" == "" ]] && {
+    echo "cant get the temporary directory"
+    show_help_and_exit_error
+}
+mkdir "${temp_dir}/images"
+
+function cleanup() {
+    rm -Rf "$temp_dir"
+}
+trap cleanup EXIT SIGQUIT SIGTERM
+
+get_image_sha() {
+    local -r url="$1"
+
+    [[ "$url" == "" ]] && {
+        echo none
+        return 0
+    }
+    if [[ "${orchestrator}" == "docker-compose" ]]; then
+        docker image inspect "${url}" --format='{{.ID}}' | cut -f2 -d: # let's hope we do not have to preserve the fact that it was sha256:
+    else
+        ctr image ls name=="${url}" | sed -n -e 's/.*sha256:\([a-zA-Z0-9]*\).*/\1/p' # let's hope we do not have to preserve the fact that it was sha256:
+    fi
+}
+
+pull_image() {
+    local -r url="$1"
+    local id
+
+    [[ "$url" == "" ]] && { return 0; }
+    if [[ "${orchestrator}" == "docker-compose" ]]; then
+        docker pull "$url" --platform "$platform"
+    else
+        ctr image pull --platform "$platform"
+    fi
+}
+
+export_image() {
+    local -r image="$1"
+    local -r output="$2"
+
+    [[ "$image" == "" ]] && { return 0; }
+    if [[ "${orchestrator}" == "docker-compose" ]]; then
+        docker image save "$image" -o "${output}"
+    else
+        ctr image export "${output}" "$image" --platform "$platform"
+    fi
+}
+
+prepare_images() {
+    local -r root_dir="$1"
+    local i
+    local j
+    local url_current
+    local url_new
+    local output_dir
+
+    for ((i = 0; i < ${#images[@]}; i++)); do
+        pull_image "${images[${i}]}"
+        images_sha+=($(get_image_sha "${images[${i}]}"))
+    done
+    declare -p images_sha
+
+    for ((i = 0; i < ${#images[@]}; i += 2)); do
+        j=$((i + 1))
+        url_current=${images[${i}]}
+        url_new=${images[${j}]}
+        output_dir="${root_dir}/${images_sha[${j}]}"
+        [[ -d "$output_dir" ]] || mkdir "$output_dir"
+        echo "${url_new}" > "${output_dir}/url-new.txt"
+        echo "${url_current}" > "${output_dir}/url-current.txt"
+        echo "${images_sha[${i}]}" > "${output_dir}/sums-current.txt"
+        echo "${images_sha[${j}]}" >> "${output_dir}/sums-new.txt"
+        if [[ "${url_current}" == "${url_new}" ]]; then
+            export_image "$url_new" "${output_dir}/image.img"
+        else
+            export_image "$url_new" "${output_dir}/image-new.img"
+            export_image "$url_current" "${output_dir}/image-current.img"
+            $delta_cmd "${output_dir}/image-current.img" "${output_dir}/image-new.img" "${output_dir}/image.img"
+            rm -f "${output_dir}/image-new.img" "${output_dir}/image-current.img"
+        fi
+    done
+}
+
+generate_metadata() {
+    local -r output="$1"
+    local sha
+    local -a shas
+
+    echo -ne "{" > "${output}"
+    echo -ne '"application_name":' >> "${output}"
+    printf '"%s",' "$application_name" >> "${output}"
+    echo -ne '"orchestrator":' >> "${output}"
+    printf '"%s",' "$orchestrator" >> "${output}"
+    echo -ne '"platform":' >> "${output}"
+    printf '"%s",' "$platform" >> "${output}"
+    echo -ne '"version":' >> "${output}"
+    printf '"%s",' "$version" >> "${output}"
+    echo -ne '"images":[' >> "${output}"
+    for sha in $(echo "${images_sha[@]}" | tr ' ' '\n' | sort | uniq); do
+        shas+=($sha)
+    done
+    for ((i = 0; i < ${#shas[@]}; i++)); do
+        printf '"%s"' "${shas[${i}]}" >> "${output}"
+        [[ $((i + 1)) -lt ${#shas[@]} ]] && echo -ne "," >> "${output}"
+    done
+    echo -ne ']' >> "${output}"
+    echo -ne "}" >> "${output}"
+}
+
+prepare_images "${temp_dir}/images"
+( cd "${temp_dir}" && tar czvf images.tar.gz images  )
+cp -a "${manifests_dir}" "${temp_dir}/manifests"
+( cd "${temp_dir}" && tar czvf "manifests.tar.gz" manifests  )
+generate_metadata "${temp_dir}/metadata.json"
+
+mender-artifact write module-image \
+    -T app \
+    $device_types \
+    -o "$output_path" \
+    -n "$artifact_name" \
+    --meta-data "${temp_dir}/metadata.json" \
+    -f "${temp_dir}/images.tar.gz" \
+    -f "${temp_dir}/manifests.tar.gz" \
+    $passthrough_args
+
+echo "Artifact $output_path generated successfully:"
+mender-artifact read "$output_path"
+
+exit 0

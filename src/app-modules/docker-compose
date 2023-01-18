@@ -1,0 +1,51 @@
+#!/bin/bash
+
+set -x
+
+docker_compose_cmd=docker-compose
+docker_cmd=docker
+
+function app_import() {
+ local -r url="$1"
+ local -r input_file="$2"
+
+ $docker_cmd image load < "$input_file"
+}
+
+function app_export() {
+ local -r url="$1"
+ local -r output_file="$2"
+
+ $docker_cmd image save "$url" -o "$output_file"
+}
+
+function app_rollout() {
+ local -r manifests_dir="$1"
+
+ ( cd "$manifests_dir" && nohup $docker_compose_cmd up -d; ) &
+}
+
+function app_stop() {
+ local -r manifests_dir="$1"
+
+ ( cd "$manifests_dir" && $docker_compose_cmd down; )
+}
+
+case "$1" in
+ export)
+  shift
+  app_export "$@"
+ ;;
+ import)
+  shift
+  app_import "$@"
+ ;;
+ rollout)
+  shift
+  app_rollout "$@"
+ ;;
+ stop)
+  shift
+  app_stop "$@"
+ ;;
+esac
