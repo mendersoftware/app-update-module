@@ -15,3 +15,24 @@ test:check-shell-formatting:
   before_script:
     - SHELL_SCRIPTS="gen/app-gen"
 
+test:smoketests:gen:
+  stage: test
+  variables:
+    DOCKER_BUILDKIT: 0
+    COMPOSE_DOCKER_CLI_BUILD: 0
+  tags:
+    - docker
+  image: docker:20.10.10-dind-alpine3.14
+  services:
+    - name: docker:20.10.10-dind-alpine3.14
+      alias: docker
+      command: ["--mtu=1440"] # https://gitlab.com/gitlab-com/gl-infra/production/-/issues/5590
+  before_script:
+    - apk --update --no-cache add bash curl aws-cli xz jq wget
+  script:
+    - ./tests/gen/run.sh
+  artifacts:
+    expire_in: 2w
+    paths:
+      - tests/gen/data/docker/output
+    when: always
