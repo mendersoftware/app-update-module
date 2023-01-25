@@ -13,6 +13,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+set -x
 set -e
 set -u
 
@@ -60,7 +61,7 @@ if ! check_dependency mender-artifact; then
 fi
 
 delta_cmd="xdelta3 -e -s"
-device_types=""
+declare -a device_types
 artifact_name=""
 output_path="app-artifact.mender"
 passthrough=0
@@ -73,6 +74,7 @@ declare -a images
 declare -a images_shas
 
 while [ -n "$1" ]; do
+    set -u
     if test $passthrough -eq 1; then
         passthrough_args="$passthrough_args $1"
         shift
@@ -83,11 +85,11 @@ while [ -n "$1" ]; do
             if [ -z "$2" ]; then
                 show_help_and_exit_error
             fi
+            application_name="$2"
             if [[ $application_name =~ $APPLICATION_NAME_ALLOWED_REGEX ]]; then
                 echo "ERROR: application name must contain only alpha-numerics, _ or -" >&2
                 show_help_and_exit_error
             fi
-            application_name="$2"
             shift 2
             ;;
         --manifests-dir | -m)
@@ -124,7 +126,7 @@ while [ -n "$1" ]; do
             if [ -z "$2" ]; then
                 show_help_and_exit_error
             fi
-            device_types="$device_types $1 $2"
+            device_types+=("-t" "$2")
             shift 2
             ;;
         --artifact-name | -n)
@@ -157,6 +159,7 @@ while [ -n "$1" ]; do
             shift
             ;;
     esac
+    set +u
 done
 
 if [ -z "${artifact_name}" ]; then
@@ -311,7 +314,7 @@ generate_metadata "${temp_dir}/metadata.json"
 
 mender-artifact write module-image \
     -T app \
-    "$device_types" \
+    "${device_types[@]}" \
     -o "$output_path" \
     -n "$artifact_name" \
     --meta-data "${temp_dir}/metadata.json" \
