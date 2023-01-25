@@ -14,6 +14,7 @@ include:
 test:check-shell-formatting:
   before_script:
     - SHELL_SCRIPTS="gen/app-gen"
+    - SHELL_SCRIPTS="src/app src/app-modules/docker-compose"
 
 test:smoketests:gen:
   stage: test

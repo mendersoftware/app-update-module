@@ -119,10 +119,10 @@ Parameters:
 Allows loading of a component from a file (e.g.: docker load < image.tar)
 
 Parameters: 
+* `application_name` -- application name
 * `url` -- identifier of a component; for containers it is image URL. May contain the sha256 (or other sum)
   after `@` sign, in which case we check if the sums match. For other orchestrator sub-modules
   it maybe a path, or some other resource handler.
-* `application_name` -- application name
 * `path` -- path to a file holding the data
 
 #### LS_COMPONENTS
@@ -179,6 +179,8 @@ Rolls back the composition to a previous working state
 
 Parameters:
 * `application_name` -- application name
+* `source_directory` -- directory containing the manifests. In case of k8s
+  it is a directory where we run apply, or docker-compose up in case of docker-compose.
 
 #### PURGE 
 Removes every component of the application
@@ -191,12 +193,16 @@ Stops the application
 
 Parameters:
 * `application_name` -- application name
+* `source_directory` -- directory containing the manifests. In case of k8s
+  it is a directory where we run apply, or docker-compose up in case of docker-compose.
 
 #### START
 Starts the application
 
 Parameters:
 * `application_name` -- application name
+* `source_directory` -- directory containing the manifests. In case of k8s
+  it is a directory where we run apply, or docker-compose up in case of docker-compose.
 
 #### ALIVE
 Returns true if application is live
