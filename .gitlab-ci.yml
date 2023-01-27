@@ -3,13 +3,11 @@ stages:
 
 include:
   - project: 'Northern.tech/Mender/mendertesting'
-    file: '.gitlab-ci-check-commits.yml'
-  - project: 'Northern.tech/Mender/mendertesting'
-    file: '.gitlab-ci-check-license.yml'
-  - project: 'Northern.tech/Mender/mendertesting'
-    file: '.gitlab-ci-github-status-updates.yml'
-  - project: 'Northern.tech/Mender/mendertesting'
-    file: '.gitlab-ci-check-shell-format.yml'
+    file:
+      - '.gitlab-ci-check-commits.yml'
+      - '.gitlab-ci-check-license.yml'
+      - '.gitlab-ci-github-status-updates.yml'
+      - '.gitlab-ci-check-shell-format.yml'
 
 test:check-shell-formatting:
   before_script:
