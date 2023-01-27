@@ -11,5 +11,25 @@ include:
 
 test:check-shell-formatting:
   before_script:
-    - SHELL_SCRIPTS="src/app src/app-modules/docker-compose"
+    - SHELL_SCRIPTS="src/app src/app-modules/docker-compose tests/app/run.sh tests/app/scenarios/00_basic_ArtifactInstall.run.sh"
 
+test:smoketests:app:
+  stage: test
+  variables:
+    DOCKER_BUILDKIT: 0
+    COMPOSE_DOCKER_CLI_BUILD: 0
+  tags:
+    - docker
+  image: tiangolo/docker-with-compose
+  services:
+    - name: docker:20.10.10-dind-alpine3.14
+      alias: docker
+  before_script:
+    - apk --update --no-cache add bash curl aws-cli tree xz jq wget xdelta3
+  script:
+    - ./tests/app/run.sh
+  artifacts:
+    expire_in: 2w
+    paths:
+      - tests/app/data/docker/output
+    when: always
