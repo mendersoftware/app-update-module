@@ -1,0 +1,2 @@
+alpine:3.14 "/bin/sleep 512"
+memcached:1.6.17-alpine "/bin/sleep 512"
