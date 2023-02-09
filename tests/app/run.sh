@@ -37,5 +37,6 @@ artifact_file=/tests/$(basename "$artifact_file")
 
 while read -r; do
     echo "running $REPLY"
-    EXPECTED_CONTAINERS="${root_dir}/data/docker"/expected.containers-delta.txt ARTIFACT_FILE="${artifact_file}" DATA="${root_dir}/data/docker" MODULE="${module}" "$REPLY" && echo -e "$REPLY \E[0;32mPASSED\E[0m"
+    EXPECTED_CONTAINERS="${root_dir}/data/docker"/expected.containers-delta.txt ARTIFACT_FILE="${artifact_file}" DATA="${root_dir}/data/docker" MODULE="${module}" "$REPLY" || exit 1
+    echo -e "\n$REPLY \E[0;32mPASSED\E[0m\n"
 done < <(find "$scenarios_dir" -mindepth 1 -maxdepth 1 -name "*run.sh")
