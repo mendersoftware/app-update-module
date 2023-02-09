@@ -25,12 +25,13 @@ Simple tool to generate Mender Artifact suitable for App Update Module
 
 Usage: $0 [options] [-- [options-for-mender-artifact] ]
 
-    Options: [ -n|--artifact-name -t|--device-type -o|--output_path --i|--image -p|--platform -r|--orchestrator -m|--manifests-dir -h|--help -a|--application-name ]
+    Options: [ -n|--artifact-name -t|--device-type -o|--output_path -i|--image -d|--deep-delta -p|--platform -r|--orchestrator -m|--manifests-dir -h|--help -a|--application-name ]
 
         --artifact-name     - Artifact name
         --device-type       - Target device type identification (can be given more than once)
         --output-path       - Path to output artifact file. Default: reboot-artifact.mender
         --image [current-url,]new-url       - Path to output artifact file. Default: reboot-artifact.mender
+        --deep-delta        - Calculate delta by parsing the image
         --manifests-dir     - Directory containing orchestrator-specific manifests describing the deployment
         --platform          - Platform of the images, e.g.: linux/arm/v7
         --orchestrator      - Name of the orchestrator, and name of the sub-module, e.g.: docker-compose
@@ -71,7 +72,9 @@ platform=""
 manifests_dir=""
 declare -a images
 declare -a images_shas
+deep_delta=false
 
+set +u
 while [ -n "$1" ]; do
     set -u
     if test $passthrough -eq 1; then
@@ -120,6 +123,10 @@ while [ -n "$1" ]; do
             images+=($(echo "$2" | cut -f1 -d,)) # current
             images+=($(echo "$2" | cut -f2 -d,)) # new, if current!=new then we need to generate delta.
             shift 2
+            ;;
+        --deep-delta | -d)
+            deep_delta=true
+            shift 1
             ;;
         --device-type | -t)
             if [ -z "$2" ]; then
@@ -240,6 +247,136 @@ export_image() {
     fi
 }
 
+function parse_parent_child() {
+    local -r root_dir="$1"/parent-child
+    local -A id2parent
+    local -A parent2id
+    local -a ids
+    local -a a
+    local json
+    local i
+    local parentid
+    local id
+
+    while read -r json; do
+        parentid=$(cat "$json" | jq -r .parent)
+        id=$(dirname "$json")
+        id=$(basename "$id")
+        id2parent[${id}]=${parentid}
+        parent2id[${parentid}]=${id}
+        [[ "$parentid" != "null" ]] && ids+=("${id}")
+    done < <(find "$1" -name json)
+
+    set +e
+    parentid="${parent2id[null]}"
+    mkdir -p "${root_dir}/${parentid}"
+    i=0
+    while [[ ${#ids[@]} -gt 0 ]]; do
+        id=${ids[${i}]}
+        parentid=${id2parent[${id}]}
+        [[ "$parentid" == "" ]] && { break; }
+        parent_dir=$(find "$root_dir" -name "$parentid" -and -type d)
+        if [[ "$parent_dir" != "" ]]; then
+            mkdir -p "${parent_dir}/${id}"
+            a=("${ids[@]/${id}/}")
+            ids=(${a[@]})
+            i=0
+        else
+            let i++
+            [[ $i -ge ${#ids[@]} ]] && i=0
+        fi
+    done
+    set +e
+}
+# deep_delta "${output_dir}/image-current.img" "${output_dir}/image-new.img" "${output_dir}/image.img"
+deep_delta() {
+    local -r root_dir="$1"
+    local -r current="$2"
+    local -r new="$3"
+    local -r output="$4"
+    local -r current_dir="${root_dir}/current-image"
+    local -r new_dir="${root_dir}/new-image"
+    local -A id2sum_current
+    local -A id2sum_new
+    local sum
+    local sum_current
+    local id
+    local max_level
+    local i
+    local -a current_ids
+    local -a new_ids
+    local -A sum2path_new
+    local -A sum2path_current
+    local tmp_file=$(mktemp)
+
+    rm -f "$tmp_file"
+    mkdir -p "${current_dir}"
+    mkdir -p "${new_dir}"
+    tar xf "$current" -C "$current_dir" || {
+        echo "ERROR errors unpacking $current"
+        return 1
+    }
+    tar xf "$new" -C "$new_dir" || {
+        echo "ERROR errors unpacking $new"
+        return 1
+    }
+    parse_parent_child "$current_dir"
+    parse_parent_child "$new_dir"
+    tree "$current_dir"
+    tree "$new_dir"
+    while read -r; do
+        sum=$(sha256sum "$REPLY" | cut -f1 -d' ')
+        id=$(dirname "$REPLY")
+        id=$(basename "$id")
+        id2sum_current[$id]=$sum
+        sum2path_current[$sum]="$REPLY"
+    done < <(find "$current_dir" -name layer.tar)
+    while read -r; do
+        sum=$(sha256sum "$REPLY" | cut -f1 -d' ')
+        echo "sum of $REPLY is $sum"
+        id=$(dirname "$REPLY")
+        id=$(basename "$id")
+        id2sum_new[$id]=$sum
+        sum2path_new[$sum]="$REPLY"
+        echo "sum2path_new saving $sum"
+    done < <(find "$new_dir" -name layer.tar)
+    max_level=$(find "$current_dir" -name layer.tar | wc -l)
+    i=1
+    while [[ $i -le $max_level ]]; do
+        id=$(find "${current_dir}"/parent-child -maxdepth $i -mindepth $i -type d)
+        id=$(basename "${id}")
+        current_ids+=("${id}")
+        id=$(find "${new_dir}"/parent-child -maxdepth $i -mindepth $i -type d)
+        id=$(basename "${id}")
+        new_ids+=("${id}")
+        let i++
+    done
+    for ((i = 0; i < ${max_level}; i++)); do
+        id=${current_ids[${i}]}
+        sum_current=${id2sum_current[${id}]}
+        id=${new_ids[${i}]}
+        sum=${id2sum_new[${id}]}
+        echo "level $i $id $sum $sum_current"
+        if [[ "${sum}" == "${sum_current}" ]]; then
+            echo "      layers match sum:$sum"
+            echo "${sum}" > "${sum2path_new[$sum]}".sha256sum
+            rm -f "${sum2path_new[$sum]}"
+        else
+            echo "      modified layer"
+            echo $delta_cmd "${sum2path_current[$sum_current]}" "${sum2path_new[$sum]}" "$tmp_file"
+            $delta_cmd "${sum2path_current[$sum_current]}" "${sum2path_new[$sum]}" "$tmp_file"
+            mv "$tmp_file" "${sum2path_new[$sum]}".vcdiff
+            echo "${sum_current}" > "${sum2path_new[$sum]}".current.sha256sum
+            echo "${sum}" > "${sum2path_new[$sum]}".new.sha256sum
+            rm -f "${sum2path_new[$sum]}"
+        fi
+    done
+    rm -f "$output"
+    rm -Rf "$current_dir"/parent-child "$new_dir"/parent-child
+    tar -cf "$output" -C "$new_dir" .
+    rm -Rf "$current_dir" "$new_dir"
+}
+
 prepare_images() {
     local -r root_dir="$1"
     local i
@@ -273,7 +410,12 @@ prepare_images() {
                 echo "For delta artifacts xdelta3 is required" >&2
                 exit 1
             fi
-            $delta_cmd "${output_dir}/image-current.img" "${output_dir}/image-new.img" "${output_dir}/image.img"
+            if [[ ${deep_delta} == true ]]; then
+                deep_delta "${root_dir}" "${output_dir}/image-current.img" "${output_dir}/image-new.img" "${output_dir}/image.img"
+                touch "${output_dir}"/deep_delta
+            else
+                $delta_cmd "${output_dir}/image-current.img" "${output_dir}/image-new.img" "${output_dir}/image.img"
+            fi
             rm -f "${output_dir}/image-new.img" "${output_dir}/image-current.img"
         fi
     done

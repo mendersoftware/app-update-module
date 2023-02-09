@@ -124,6 +124,7 @@ Parameters:
   after `@` sign, in which case we check if the sums match. For other orchestrator sub-modules
   it maybe a path, or some other resource handler.
 * `path` -- path to a file holding the data
+* `current_url` -- in case of [deep deltas](#deep-binary-delta-of-images) we need the current url to apply them
 
 #### LS_COMPONENTS
 Allows listing components of a given application. It will output a list of components,
@@ -329,3 +330,6 @@ When `image.img` contains complete component data, both `url-current.txt` and `u
 the same content.
 
 The names of directories in `images` folder are always checksums of the new component.
+
+#### Deep binary delta of images
+
