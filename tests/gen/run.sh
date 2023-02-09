@@ -17,6 +17,8 @@ set -x
 
 root_dir=$(dirname $0)
 root_dir=$(cd "$root_dir" && pwd)
+common_path=$(echo "$root_dir" | sed -e 's|\(/[^/]*\)$|/common|')
+. "${common_path}/functions.sh"
 generator=$(cd "$root_dir" && pwd | sed -e 's|tests/gen|gen/app-gen|')
 generator=${GENERATOR_EXEC:-${generator}}
 [[ "${root_dir}" == "" ]] && echo "ERROR: cant determine root_dir"
@@ -25,5 +27,8 @@ wget 'https://downloads.mender.io/mender-artifact/master/linux/mender-artifact' 
 chmod 755 /usr/bin/mender-artifact
 
 while read -r; do
-    DATA="${root_dir}/data/docker" GENERATOR="${generator}" "$REPLY" && echo -e "$REPLY \E[0;32mPASSED\E[0m"
+    DATA="${root_dir}/data/docker" \
+        GENERATOR="${generator}" \
+        "$REPLY" || exit 1
+    echo -e "\n$REPLY $(g PASSED)\n"
 done < <(find "$scenarios_dir" -mindepth 1 -maxdepth 1 -name "*run.sh")
