@@ -15,7 +15,7 @@
 
 set -x
 
-root_dir=`dirname $0`
+root_dir=$(dirname $0)
 root_dir=$(cd "$root_dir" && pwd)
 generator=$(cd "$root_dir" && pwd | sed -e 's|tests/gen|gen/app-gen|')
 generator=${GENERATOR_EXEC:-${generator}}
@@ -24,7 +24,6 @@ scenarios_dir="${root_dir}/scenarios"
 wget 'https://downloads.mender.io/mender-artifact/master/linux/mender-artifact' -O /usr/bin/mender-artifact
 chmod 755 /usr/bin/mender-artifact
 
-while read -r; do 
- DATA="${root_dir}/data/docker" GENERATOR="${generator}" "$REPLY" && echo -e "$REPLY \E[0;32mPASSED\E[0m"
+while read -r; do
+    DATA="${root_dir}/data/docker" GENERATOR="${generator}" "$REPLY" && echo -e "$REPLY \E[0;32mPASSED\E[0m"
 done < <(find "$scenarios_dir" -mindepth 1 -maxdepth 1 -name "*run.sh")
-
