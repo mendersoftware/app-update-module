@@ -20,7 +20,7 @@ test:smoketests:
     COMPOSE_DOCKER_CLI_BUILD: 0
   tags:
     - docker
-  image: tiangolo/docker-with-compose
+  image: tiangolo/docker-with-compose:2022-12-26
   services:
     - name: docker:20.10.10-dind-alpine3.14
       alias: docker
