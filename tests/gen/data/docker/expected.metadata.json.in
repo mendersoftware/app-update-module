@@ -1,0 +1,10 @@
+{
+  "application_name": "myapp0",
+  "images": [
+    "%sha1",
+    "%sha2"
+  ],
+  "orchestrator": "docker-compose",
+  "platform": "linux/amd64",
+  "version": "1.0"
+}
