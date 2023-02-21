@@ -333,3 +333,19 @@ The names of directories in `images` folder are always checksums of the new comp
 
 #### Deep binary delta of images
 
+Both the update module generator and the `docker-compose` orchestrator sub-module
+support the so-called _deep deltas_. The "deep" part refers to the way treat images
+for the delta encoding. In the simplest, _non-deep_ case, we look at the images as at binary
+blobs of data, and as such pass to the binary delta generation executable. However, in case
+of docker images we can do better.
+
+Docker image is a linked list of `layer.tar` files that represent the commands used to generate
+them, in form binary streams that are applied one on top of another (hence called _layers_).
+Imagine you perform an upgrade of your postgres database from 15.0 to 15.1, because the security
+team told you so. Many layers of that image will be very similar, but the delta of the whole image
+is not as little as you would expect. Observing that and performing some tests we came up with the idea
+of generating the deltas between the `layer.tar` files.
+
+The above approach is not portable between different orchestrator sub-modules,
+and therefore it is the job of the [LOAD](#load-component) function to deal with the decoding
+of the deep deltas, as the generator in order to stay portable encodes them inside the images.
