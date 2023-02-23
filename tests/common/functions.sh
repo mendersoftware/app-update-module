@@ -14,5 +14,5 @@
 #    limitations under the License.
 
 function g() {
-      echo -e "\E[0;32m$@\E[0m"
+    echo   -e "\E[0;32m$@\E[0m"
 }

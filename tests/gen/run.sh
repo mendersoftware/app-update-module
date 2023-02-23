@@ -28,7 +28,7 @@ chmod 755 /usr/bin/mender-artifact
 
 while read -r; do
     DATA="${root_dir}/data/docker" \
-    GENERATOR="${generator}" \
-    "$REPLY" || exit 1
+        GENERATOR="${generator}" \
+        "$REPLY" || exit 1
     echo -e "\n$REPLY $(g PASSED)\n"
 done < <(find "$scenarios_dir" -mindepth 1 -maxdepth 1 -name "*run.sh")
