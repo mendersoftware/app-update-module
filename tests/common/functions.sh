@@ -16,3 +16,11 @@
 function g() {
     echo   -e "\E[0;32m$@\E[0m"
 }
+
+function y() {
+    echo   -e "\E[33;1m$@\E[0m"
+}
+
+function b() {
+    echo   -e "\E[34;1m$@\E[0m"
+}
