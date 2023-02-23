@@ -44,5 +44,5 @@ while read -r; do
     DATA="${root_dir}/data/docker" \
     MODULE="${module}" \
     "$REPLY" || exit 1
-    echo -e "\n$REPLY \E[0;32mPASSED\E[0m\n"
+    echo -e "\n$REPLY $(g PASSED)\n"
 done < <(find "$scenarios_dir" -mindepth 1 -maxdepth 1 -name "*run.sh")

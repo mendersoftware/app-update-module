@@ -57,6 +57,7 @@ deep_size=$(stat -c %s "${artifact_file}")
 regular_size=$(stat -c %s "${artifact_file_non_deep}")
 echo "delta artifact size: ${regular_size}b"
 echo "deep delta artifact size: ${deep_size}b"
+[[ ${deep_size} -lt ${regular_size} ]]
 p=$(awk -v b="${deep_size}" -v a="${regular_size}" 'BEGIN{printf("%0.2lf%%",(a-b)*1.0/((a+b)*0.5));}')
 echo "relative percentage gain in deep size: $((regular_size - deep_size)) (${p})"
 # lets clean everything.

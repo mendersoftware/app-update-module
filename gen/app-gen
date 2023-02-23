@@ -286,8 +286,9 @@ function parse_parent_child() {
             [[ $i -ge ${#ids[@]} ]] && i=0
         fi
     done
-    set +e
+    set -e
 }
+
 # deep_delta "${output_dir}/image-current.img" "${output_dir}/image-new.img" "${output_dir}/image.img"
 deep_delta() {
     local -r root_dir="$1"

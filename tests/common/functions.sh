@@ -13,3 +13,6 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+function g() {
+      echo -e "\E[0;32m$@\E[0m"
+}
