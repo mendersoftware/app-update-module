@@ -39,6 +39,20 @@ artifact_name=$(basename "$temp_dir")
     --platform linux/arm/v7 \
     --deep-delta
 
+artifact_file_non_deep="${temp_dir}/a0-non-deep.mender"
+artifact_name_non_deep=$(basename "$temp_dir")-non-deep
+"${GENERATOR:-./gen/app-gen}" \
+    --image docker.io/library/debian:10,docker.io/library/debian:latest \
+    --image docker.io/library/postgres:15.0,docker.io/library/postgres:15.1 \
+    --artifact-name "${artifact_name_non_deep}" \
+    --device-type FP.VT-04 \
+    --output-path "${artifact_file_non_deep}" \
+    --manifests-dir "${DATA}"/manifests \
+    --orchestrator docker-compose \
+    --application-name myapp4 \
+    --platform linux/arm/v7 \
+
+ls -sh "${artifact_file}" "${artifact_file_non_deep}"
 # lets clean everything.
 docker stop $(docker ps -qa) || true
 docker container rm $(docker container ls -aq) || true
