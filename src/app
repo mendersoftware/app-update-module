@@ -37,6 +37,7 @@ platform=""
 app_sub_module=""
 artifact_name=""
 application_name=""
+options=""
 
 if test -f "$CONFIG_FILE"; then
     . "$CONFIG_FILE"
@@ -109,6 +110,7 @@ handle_artifact() {
     local sha_current
     local image_current
     local image_new
+    local deep_delta
     local rollback_id="last"
 
     if test ! -d "$temp_dir"; then
@@ -142,17 +144,28 @@ handle_artifact() {
                 echo "ERROR: sha_ccurrent cannot be empty"
                 return 1
             fi
-            image_current="${temp_dir}/current.${sha_current}.img"
-            image_new="${temp_dir}/new.${sha_new}.img"
-            $app_sub_module SAVE "${application_name}" "$url_current" "$image_current"
-            $delta_cmd "$image_current" "${image_dir}/image.img" "${image_new}"
-            mv -v "${image_new}" "${image_dir}/image.img"
+            if test ! -f "${image_dir}/deep_delta"; then
+                # deep-delta means that the binary delta was generated at the layers level,
+                # and the orchestrators submodule will deal with decoding during the LOAD below
+                # ref. to LOAD implementations
+                image_current="${temp_dir}/current.${sha_current}.img"
+                image_new="${temp_dir}/new.${sha_new}.img"
+                $app_sub_module SAVE "${application_name}" "$url_current" "$image_current"
+                $delta_cmd "$image_current" "${image_dir}/image.img" "${image_new}"
+                mv -v "${image_new}" "${image_dir}/image.img"
+            fi
         fi
     done
     for image_dir in "${temp_dir}/images/"*; do
+        url_current=$(cat "${image_dir}/url-current.txt")
         url_new=$(cat "${image_dir}/url-new.txt")
         sha_new=$(cat "${image_dir}/sums-new.txt")
-        $app_sub_module LOAD "${application_name}" "${url_new}" "${image_dir}/image.img"
+        deep_delta=""
+        if test -f "${image_dir}/deep_delta"; then
+            deep_delta=deep_delta
+        fi
+        MODULE_TMPDIR="${temp_dir}" OPTIONS="${deep_delta}" $app_sub_module LOAD "${application_name}" "${url_new}" "${image_dir}/image.img" "${url_current}"
+        # and the sub module deals with proper image loading
     done
     # we should check if the app is healthy and alive, then decide what to do
     # at the moment we assume it is alive and ok

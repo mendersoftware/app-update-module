@@ -124,6 +124,7 @@ Parameters:
   after `@` sign, in which case we check if the sums match. For other orchestrator sub-modules
   it maybe a path, or some other resource handler.
 * `path` -- path to a file holding the data
+* `current_url` -- in case of [deep deltas](#deep-binary-delta-of-images) we need the current url to apply them
 
 #### LS_COMPONENTS
 Allows listing components of a given application. It will output a list of components,
@@ -329,3 +330,25 @@ When `image.img` contains complete component data, both `url-current.txt` and `u
 the same content.
 
 The names of directories in `images` folder are always checksums of the new component.
+
+#### Deep binary delta of images
+
+Both the update module generator and the `docker-compose` orchestrator sub-module
+support _deep deltas_. The "deep" part refers to how we treat images
+during the delta encoding. In the simplest, _non-deep_ case, we look at the images as binary
+blobs of data, and simply pass it on to the binary delta generation executable. However, in the case
+of docker images we can do better.
+
+A Docker image is a linked list of `layer.tar` files that represent the commands used to generate
+them, in the form of binary streams that are applied one on top of another (hence called _layers_).
+
+As an example: imagine you perform an upgrade of your postgres database from 15.0 to 15.1,
+because of a reported security vulnerability. Many layers of that image will probably be very similar,
+but the whole-image delta does not give a lot of saved space.
+
+This observation and some test groundwork led us to the idea
+of generating the deltas between the `layer.tar` files.
+
+Note however that the above approach is not portable between different orchestrator sub-modules,
+and therefore it is the job of the [LOAD](#load-component) function to deal with the decoding
+of the deep deltas, as the generator encodes them inside the images, in order to stay portable.
