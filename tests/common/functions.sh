@@ -24,3 +24,7 @@ function y() {
 function b() {
     echo   -e "\E[34;1m$@\E[0m"
 }
+
+export -f g
+export -f y
+export -f b
