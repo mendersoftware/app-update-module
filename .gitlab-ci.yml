@@ -57,3 +57,4 @@ test:acceptancetests:
   script:
     - docker run -d --entrypoint sleep debian:latest 65536
     - docker ps
+    - ls -alR
