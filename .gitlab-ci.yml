@@ -47,8 +47,8 @@ test:acceptancetests:
   image: ubuntu:22.04
   services:
     - docker:dind
-  tags:
-    - mender-qa-worker-generic
+#   tags:
+#     - mender-qa-worker-generic
   before_script:
     - apt update && apt install -yy bash wget xz-utils awscli docker.io curl
     - docker ps
