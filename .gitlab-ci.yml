@@ -82,8 +82,9 @@ test:acceptancetests:
     - cat /etc/docker/daemon.json 
 # - /usr/bin/dockerd --storage-driver=overlay2 &
     - /usr/bin/dockerd &
+    - df -h
     - sleep 32
-    - find / -name '*docker*'
+#     - find / -name '*docker*'
     - ps axuw | grep docker
     - lsof | grep docker
 #     - journalctl -u docker
