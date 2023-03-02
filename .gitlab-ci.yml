@@ -60,8 +60,8 @@ test:acceptancetests:
     - curl -fsSL https://download.docker.com/linux/debian/gpg | apt-key add -
     - add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/debian $(lsb_release -cs) stable"
     - apt update
-    - apt-cache policy docker-ce
-    - apt install docker-ce lsof -y
+#     - apt-cache policy docker-ce
+    - apt install docker-ce lsof fuse-overlayfs -y
 #     - service docker start
 #     - /usr/bin/dockerd --storage-opt dm.fs=ext4 &
     - mkdir /etc/docker || true
@@ -79,7 +79,6 @@ test:acceptancetests:
 #     - echo '"' >> /etc/docker/daemon.json
 #     - echo "}" > /etc/docker/daemon.json
 ##     - echo '  "storage-driver": "overlay2"' >> /etc/docker/daemon.json
-    - echo "}" >> /etc/docker/daemon.json
     - cat /etc/docker/daemon.json 
 # - /usr/bin/dockerd --storage-driver=overlay2 &
     - /usr/bin/dockerd &
