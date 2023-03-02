@@ -55,5 +55,5 @@ test:acceptancetests:
     - docker info
 
   script:
-    - docker run debian:latest
+    - docker run -d --entrypoint sleep debian:latest 65536
     - docker ps
