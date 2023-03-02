@@ -70,7 +70,7 @@ test:acceptancetests:
     - echo "  " >> /etc/docker/daemon.json
     - echo '"' >> /etc/docker/daemon.json
     - echo storage-driver >> /etc/docker/daemon.json
-#     - echo '"' >> /etc/docker/daemon.json
+    - echo '"' >> /etc/docker/daemon.json
 #     - echo ": " >> /etc/docker/daemon.json
 #     - echo '"' >> /etc/docker/daemon.json
 #     - echo "overlay" >> /etc/docker/daemon.json
