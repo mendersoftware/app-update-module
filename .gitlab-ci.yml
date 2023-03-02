@@ -26,6 +26,7 @@ test:smoketests:
       alias: docker
   before_script:
     - apk --update --no-cache add bash gawk curl aws-cli tree xz jq wget xdelta3 openssl1.1-compat
+    - echo -e '{\n  "storage-driver": "overlay2"\n}' >> /etc/docker/daemon.json
   script:
     - ./tests/app/run.sh
     - ./tests/gen/run.sh
