@@ -55,11 +55,13 @@ test:acceptancetests:
     - add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/debian $(lsb_release -cs) stable"
     - apt update
     - apt-cache policy docker-ce
-    - apt install docker-ce -y
-    - service docker start
-    - /usr/local/bin/dockerd &
+    - apt install docker-ce lsof -y
+#     - service docker start
+#     - /usr/bin/dockerd --storage-opt dm.fs=ext4 &
+    - /usr/bin/dockerd --storage-driver=overlay2 &
     - sleep 32
     - ps axuw | grep docker
+    - lsof | grep docker
     - journalctl -u docker
     - journalctl -u dockerd
   script:
