@@ -69,13 +69,13 @@ test:acceptancetests:
     - echo >> /etc/docker/daemon.json
     - echo "  " >> /etc/docker/daemon.json
     - echo '"' >> /etc/docker/daemon.json
-    - echo "storage-driver" >> /etc/docker/daemon.json
-    - echo '"' >> /etc/docker/daemon.json
-    - echo ": " >> /etc/docker/daemon.json
-    - echo '"' >> /etc/docker/daemon.json
-    - echo "overlay" >> /etc/docker/daemon.json
-    - echo '"' >> /etc/docker/daemon.json
-    - echo "}" > /etc/docker/daemon.json
+#     - echo "storage-driver" >> /etc/docker/daemon.json
+#     - echo '"' >> /etc/docker/daemon.json
+#     - echo ": " >> /etc/docker/daemon.json
+#     - echo '"' >> /etc/docker/daemon.json
+#     - echo "overlay" >> /etc/docker/daemon.json
+#     - echo '"' >> /etc/docker/daemon.json
+#     - echo "}" > /etc/docker/daemon.json
 ##     - echo '  "storage-driver": "overlay2"' >> /etc/docker/daemon.json
     - echo "}" >> /etc/docker/daemon.json
     - cat /etc/docker/daemon.json 
