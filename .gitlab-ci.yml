@@ -81,8 +81,8 @@ test:acceptancetests:
 ##     - echo '  "storage-driver": "overlay2"' >> /etc/docker/daemon.json
     - cat /etc/docker/daemon.json 
 # - /usr/bin/dockerd --storage-driver=overlay2 &
-    - /usr/bin/dockerd &
     - df -h
+    - /usr/bin/dockerd &
     - sleep 32
 #     - find / -name '*docker*'
     - ps axuw | grep docker
