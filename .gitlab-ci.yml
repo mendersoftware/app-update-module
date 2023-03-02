@@ -65,7 +65,7 @@ test:acceptancetests:
 #     - service docker start
 #     - /usr/bin/dockerd --storage-opt dm.fs=ext4 &
     - mkdir /etc/docker || true
-    - echo -e '{"storage-driver":"overlay2"}' >> /etc/docker/daemon.json
+    - echo -e '{"storage-driver":"overlay"}' >> /etc/docker/daemon.json
 ## from here {{{
 #     - echo "{" > /etc/docker/daemon.json
 #     - echo >> /etc/docker/daemon.json
