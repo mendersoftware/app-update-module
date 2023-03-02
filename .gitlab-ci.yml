@@ -37,63 +37,16 @@ test:smoketests:
     when: always
 
 test:acceptancetests:
-  variables:
-    DOCKER_BUILDKIT: 0
-    COMPOSE_DOCKER_CLI_BUILD: 0
-#   services:
-#     - name: docker:20.10.10-dind-alpine3.14
-#       alias: docker
-#   variables:
-#     DOCKER_BUILDKIT: 0
-#     COMPOSE_DOCKER_CLI_BUILD: 0
-#     DOCKER_HOST: "tcp://docker:2376"
-#     DOCKER_CERT_PATH: "/certs/client"
-#     DOCKER_TLS_VERIFY: 1
-#     DOCKER_TLS_CERTDIR: "/certs"
-  stage: test
-#   tags:
-#     - docker
+  image: ubuntu:22.04
   services:
     - docker:dind
   tags:
     - mender-qa-worker-generic
-  image: debian:10
   before_script:
-    - apt-get update
-    - apt install apt-transport-https ca-certificates curl gnupg2 software-properties-common -y
-    - curl -fsSL https://download.docker.com/linux/debian/gpg | apt-key add -
-    - add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/debian $(lsb_release -cs) stable"
-    - apt update
-#     - apt-cache policy docker-ce
-    - apt install docker-ce lsof fuse-overlayfs -y
-#     - service docker start
-#     - /usr/bin/dockerd --storage-opt dm.fs=ext4 &
-    - mkdir /etc/docker || true
-    - echo -e '{"storage-driver":"overlay"}' >> /etc/docker/daemon.json
-## from here {{{
-#     - echo "{" > /etc/docker/daemon.json
-#     - echo >> /etc/docker/daemon.json
-#     - echo "  " >> /etc/docker/daemon.json
-#     - echo '"' >> /etc/docker/daemon.json
-#     - echo storage-driver >> /etc/docker/daemon.json
-#     - echo '"' >> /etc/docker/daemon.json
-## }}} works up tp here    - echo ": " >> /etc/docker/daemon.json
-#     - echo '"' >> /etc/docker/daemon.json
-#     - echo "overlay" >> /etc/docker/daemon.json
-#     - echo '"' >> /etc/docker/daemon.json
-#     - echo "}" > /etc/docker/daemon.json
-##     - echo '  "storage-driver": "overlay2"' >> /etc/docker/daemon.json
-    - cat /etc/docker/daemon.json 
-# - /usr/bin/dockerd --storage-driver=overlay2 &
-    - df -h
-    - /usr/bin/dockerd &
-    - sleep 32
-#     - find / -name '*docker*'
-    - ps axuw | grep docker
-    - lsof | grep docker
-#     - journalctl -u docker
-#     - journalctl -u dockerd
-  script:
-    - sleep 32
+    - apt update && apt install -yy bash wget xz-utils awscli docker.io curl
     - docker ps
-    - docker --version
+    - docker info
+
+  script:
+    - docker run debian:latest
+    - docker ps
