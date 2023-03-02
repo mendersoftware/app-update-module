@@ -54,7 +54,7 @@ test:acceptancetests:
 #   tags:
 #     - docker
   tags:
-    - mender-qa-slave
+    - mender-qa-worker-generic-light
   image: debian:10
   before_script:
     - apt-get update
