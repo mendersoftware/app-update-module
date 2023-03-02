@@ -53,7 +53,7 @@ test:acceptancetests:
   stage: test
   tags:
     - docker
-  image: debian:11
+  image: debian:10
   before_script:
     - apt-get update
     - apt install apt-transport-https ca-certificates curl gnupg2 software-properties-common -y
