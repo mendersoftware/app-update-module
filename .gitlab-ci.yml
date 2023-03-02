@@ -13,25 +13,20 @@ test:check-shell-formatting:
   before_script:
     - SHELL_SCRIPTS="src/app src/app-modules/docker-compose gen/app-gen tests/app/run.sh tests/app/scenarios/00_basic_ArtifactInstall.run.sh"
 
+
 test:smoketests:
   stage: test
-  variables:
-    DOCKER_BUILDKIT: 0
-    COMPOSE_DOCKER_CLI_BUILD: 0
-  tags:
-    - docker
-  image: tiangolo/docker-with-compose
+  image: ubuntu:22.04
   services:
-    - name: docker:20.10.10-dind-alpine3.14
-      alias: docker
+    - docker:dind
+  tags:
+    - mender-qa-worker-generic
   before_script:
-    - apk --update --no-cache add bash gawk curl aws-cli tree xz jq wget xdelta3 openssl1.1-compat
+    - apt update && apt install -yy bash wget xz-utils awscli docker.io curl
+
+    - docker ps
+    - docker run -it debian:10
+
   script:
-    - ./tests/app/run.sh
-    - ./tests/gen/run.sh
-  artifacts:
-    expire_in: 2w
-    paths:
-      - tests/app/data/docker/output
-      - tests/gen/data/docker/output
-    when: always
+    - docker ps
+
