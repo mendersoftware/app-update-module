@@ -64,14 +64,16 @@ test:acceptancetests:
     - apt install docker-ce lsof -y
 #     - service docker start
 #     - /usr/bin/dockerd --storage-opt dm.fs=ext4 &
-#     - mkdir /etc/docker
+    - mkdir /etc/docker || true
+    - echo -e '{\n  "storage-driver": "overlay2"\n}' >> /etc/docker/daemon.json
+## from here {{{
     - echo "{" > /etc/docker/daemon.json
     - echo >> /etc/docker/daemon.json
     - echo "  " >> /etc/docker/daemon.json
     - echo '"' >> /etc/docker/daemon.json
     - echo storage-driver >> /etc/docker/daemon.json
     - echo '"' >> /etc/docker/daemon.json
-    - echo ": " >> /etc/docker/daemon.json
+## }}} works up tp here    - echo ": " >> /etc/docker/daemon.json
 #     - echo '"' >> /etc/docker/daemon.json
 #     - echo "overlay" >> /etc/docker/daemon.json
 #     - echo '"' >> /etc/docker/daemon.json
