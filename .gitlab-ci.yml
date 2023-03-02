@@ -37,6 +37,12 @@ test:smoketests:
     when: always
 
 test:acceptancetests:
+  variables:
+    DOCKER_BUILDKIT: 0
+    COMPOSE_DOCKER_CLI_BUILD: 0
+  services:
+    - name: docker:20.10.10-dind-alpine3.14
+      alias: docker
 #   variables:
 #     DOCKER_BUILDKIT: 0
 #     COMPOSE_DOCKER_CLI_BUILD: 0
@@ -58,13 +64,14 @@ test:acceptancetests:
     - apt install docker-ce lsof -y
 #     - service docker start
 #     - /usr/bin/dockerd --storage-opt dm.fs=ext4 &
-    - mkdir /etc/docker
-    - echo "{" > /etc/docker/daemon.json
-    - echo >> /etc/docker/daemon.json
-##     - echo "  \"storage-driver\": \"overlay2\"" >> /etc/docker/daemon.json
-    - echo "}" >> /etc/docker/daemon.json
-    - cat /etc/docker/daemon.json 
-    - /usr/bin/dockerd &
+#     - mkdir /etc/docker
+#     - echo "{" > /etc/docker/daemon.json
+#     - echo >> /etc/docker/daemon.json
+##     - echo '  "storage-driver": "overlay2"' >> /etc/docker/daemon.json
+#     - echo "}" >> /etc/docker/daemon.json
+#     - cat /etc/docker/daemon.json 
+# - /usr/bin/dockerd --storage-driver=overlay2 &
+    - /usr/bin/dockerd --storage-driver=aufs &
     - sleep 32
     - find / -name '*docker*'
     - ps axuw | grep docker
