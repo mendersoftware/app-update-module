@@ -53,6 +53,8 @@ test:acceptancetests:
   stage: test
 #   tags:
 #     - docker
+  services:
+    - docker:dind
   tags:
     - mender-qa-worker-generic
   image: debian:10
