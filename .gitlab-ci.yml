@@ -40,9 +40,9 @@ test:acceptancetests:
   variables:
     DOCKER_BUILDKIT: 0
     COMPOSE_DOCKER_CLI_BUILD: 0
-  services:
-    - name: docker:20.10.10-dind-alpine3.14
-      alias: docker
+#   services:
+#     - name: docker:20.10.10-dind-alpine3.14
+#       alias: docker
 #   variables:
 #     DOCKER_BUILDKIT: 0
 #     COMPOSE_DOCKER_CLI_BUILD: 0
@@ -51,8 +51,10 @@ test:acceptancetests:
 #     DOCKER_TLS_VERIFY: 1
 #     DOCKER_TLS_CERTDIR: "/certs"
   stage: test
+#   tags:
+#     - docker
   tags:
-    - docker
+    - mender-qa-slave
   image: debian:10
   before_script:
     - apt-get update
