@@ -35,3 +35,30 @@ test:smoketests:
       - tests/app/data/docker/output
       - tests/gen/data/docker/output
     when: always
+
+test:acceptancetests:
+  variables:
+    DOCKER_BUILDKIT: 0
+    COMPOSE_DOCKER_CLI_BUILD: 0
+    DOCKER_HOST: "tcp://docker:2376"
+    DOCKER_CERT_PATH: "/certs/client"
+    DOCKER_TLS_VERIFY: 1
+    DOCKER_TLS_CERTDIR: "/certs"
+  stage: test
+  tags:
+    - docker
+  image: debian:latest
+  before_script:
+    - apt-get update
+    - apt install apt-transport-https ca-certificates curl gnupg2 software-properties-common -y
+    - curl -fsSL https://download.docker.com/linux/debian/gpg | apt-key add -
+    - add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/debian $(lsb_release -cs) stable"
+    - apt update
+    - apt-cache policy docker-ce
+    - apt install docker-ce -y
+    - service docker start
+    - journalctl -u docker
+  script:
+    - sleep 32
+    - docker ps
+    - docker --version
