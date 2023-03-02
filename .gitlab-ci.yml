@@ -47,7 +47,7 @@ test:acceptancetests:
   stage: test
   tags:
     - docker
-  image: debian:latest
+  image: debian:11
   before_script:
     - apt-get update
     - apt install apt-transport-https ca-certificates curl gnupg2 software-properties-common -y
@@ -58,12 +58,19 @@ test:acceptancetests:
     - apt install docker-ce lsof -y
 #     - service docker start
 #     - /usr/bin/dockerd --storage-opt dm.fs=ext4 &
-    - /usr/bin/dockerd --storage-driver=overlay2 &
+    - mkdir /etc/docker
+    - echo "{" > /etc/docker/daemon.json
+    - echo >> /etc/docker/daemon.json
+##     - echo "  \"storage-driver\": \"overlay2\"" >> /etc/docker/daemon.json
+    - echo "}" >> /etc/docker/daemon.json
+    - cat /etc/docker/daemon.json 
+    - /usr/bin/dockerd &
     - sleep 32
+    - find / -name '*docker*'
     - ps axuw | grep docker
     - lsof | grep docker
-    - journalctl -u docker
-    - journalctl -u dockerd
+#     - journalctl -u docker
+#     - journalctl -u dockerd
   script:
     - sleep 32
     - docker ps
