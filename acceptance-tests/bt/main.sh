@@ -36,7 +36,11 @@ while read -r scenario; do
         . "$scenario"
         for ((i = 0; i < ${#TEST_PHASES_NAMES[@]}; i++)); do
             p="${TEST_PHASES_NAMES[${i}]}"
-            bt_call_functions_by_phase "$p"
+            bt_call_functions_by_phase "$p" || break
         done
     )
-done < <(find "${1}" -mindepth 1 -maxdepth 1 -and -name "*.sh" -and -type f)
+    rc=$?
+    if [[ $rc -ne 0 ]]; then
+        exit $rc
+    fi
+done < <(find "${1}" -mindepth 1 -maxdepth 1 -and -name "*.sh" -and -type f | sort -n)

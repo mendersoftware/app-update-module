@@ -28,6 +28,7 @@ function log_failed() {
 function bt_call_functions_by_phase() {
     local -r phase="$1"
     local f
+    local rc=0
 
     while read -r f; do
         . <(echo "$f")
@@ -37,6 +38,8 @@ function bt_call_functions_by_phase() {
         else
             log_failed "$f"
             bt_call_failure_hook "$phase" "$f"
+            rc=1
         fi
     done < <(bt_get_functions_by_prefix "test_phase_${phase}")
+    return $rc
 }
