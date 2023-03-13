@@ -1,3 +1,10 @@
+variables:
+  DEBIAN_FRONTEND: noninteractive
+  DOCKER_HOST: "tcp://docker:2376"
+  DOCKER_CERT_PATH: "/certs/client"
+  DOCKER_TLS_VERIFY: "1"
+  DOCKER_TLS_CERTDIR: "/certs"
+
 stages:
   - test
 
@@ -11,7 +18,7 @@ include:
 
 test:check-shell-formatting:
   before_script:
-    - SHELL_SCRIPTS="src/app src/app-modules/docker-compose gen/app-gen tests/app/run.sh tests/app/scenarios/00_basic_ArtifactInstall.run.sh"
+    - SHELL_SCRIPTS="src/app src/app-modules/docker-compose gen/app-gen tests/app/run.sh tests/app/scenarios/00_basic_ArtifactInstall.run.sh acceptance-tests/scenarios.d/00.basic.non.delta.successful.sh acceptance-tests/run.sh acceptance-tests/bt/main.sh acceptance-tests/bt/lib/functions.sh acceptance-tests/bt/bt.sh"
 
 test:smoketests:
   stage: test
@@ -35,3 +42,21 @@ test:smoketests:
       - tests/app/data/docker/output
       - tests/gen/data/docker/output
     when: always
+
+test:acceptancetests:
+  image: ubuntu:20.04
+  services:
+    - docker:dind
+  before_script:
+    - apt update && apt install -yy bash wget xz-utils awscli docker.io curl make xdelta3 tree
+    - docker ps
+    - docker info
+    - mkdir -p ~/.docker/cli-plugins/
+    - curl -SL https://github.com/docker/compose/releases/download/v2.3.3/docker-compose-linux-x86_64 -o ~/.docker/cli-plugins/docker-compose
+    - chmod +x ~/.docker/cli-plugins/docker-compose
+    - ~/.docker/cli-plugins/docker-compose --help
+    - cp ~/.docker/cli-plugins/docker-compose /usr/bin/
+    - docker compose version
+
+  script:
+    - ./acceptance-tests/run.sh
