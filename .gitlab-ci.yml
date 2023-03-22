@@ -32,7 +32,7 @@ test:smoketests:
     - name: docker:20.10.10-dind-alpine3.14
       alias: docker
   before_script:
-    - apk --update --no-cache add bash gawk curl aws-cli tree xz jq wget xdelta3 openssl1.1-compat
+    - apk --update --no-cache add bash gawk curl aws-cli tree xz jq wget xdelta3 openssl1.1-compat gcompat
   script:
     - ./tests/app/run.sh
     - ./tests/gen/run.sh
