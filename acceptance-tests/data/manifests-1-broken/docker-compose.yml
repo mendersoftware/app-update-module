@@ -1,0 +1,20 @@
+version: '2.3'
+services:
+    myapp:
+        image: docker.io/some_library/some_alpine:3.14
+        privileged: true
+        networks:
+            - local_net
+        depends_on:
+            - db
+        entrypoint:
+            - /bin/sleep
+            - "65536"
+    db:
+        image: docker.io/some_library/some_memcached:1.6.18-alpine
+        networks:
+            - local_net
+        environment:
+            - POSTGRES_HOST_AUTH_METHOD=trust
+networks:
+    local_net: null
