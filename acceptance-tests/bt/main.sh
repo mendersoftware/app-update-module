@@ -22,6 +22,7 @@ BT_DEFAULT_PHASES=(
     "build"
     "run"
     "collect"
+    "cleanup"
 )
 
 if [[ "${#TEST_PHASES_NAMES[@]}" == "" || ${#TEST_PHASES_NAMES[@]} -lt 1 ]]; then
