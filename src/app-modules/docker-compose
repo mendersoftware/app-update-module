@@ -15,9 +15,15 @@
 
 set -x
 
-docker_compose_cmd=docker-compose
-docker_cmd=docker
-delta_cmd="xdelta3 -d -s"
+MODULE_CONFIG_FILE="/etc/mender/mender-app-docker-compose.conf"
+
+if test -f "$MODULE_CONFIG_FILE"; then
+    . "$MODULE_CONFIG_FILE"
+fi
+
+docker_compose_cmd=${DOCKER_COMPOSE_COMMAND:-"docker-compose"}
+docker_cmd=${DOCKER_COMMAND:-"docker"}
+delta_cmd=${XDELTA_COMMANDLINE:-"xdelta3 -d -s"}
 
 unpack_image() {
     local input_file="$1"
