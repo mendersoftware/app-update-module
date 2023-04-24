@@ -22,6 +22,7 @@ BT_DEFAULT_PHASES=(
     "build"
     "run"
     "collect"
+    "cleanup"
 )
 
 if [[ "${#TEST_PHASES_NAMES[@]}" == "" || ${#TEST_PHASES_NAMES[@]} -lt 1 ]]; then
@@ -36,7 +37,13 @@ while read -r scenario; do
         . "$scenario"
         for ((i = 0; i < ${#TEST_PHASES_NAMES[@]}; i++)); do
             p="${TEST_PHASES_NAMES[${i}]}"
-            bt_call_functions_by_phase "$p" || break
+            log "running: bt_call_functions_by_phase \"$p\""
+            bt_call_functions_by_phase "$p"
+            rc=$?
+            if [[ $rc -ne 0 ]]; then
+                log "bt_call_functions_by_phase \"$p\" failed: rc ${rc}"
+                break
+            fi
         done
     )
     rc=$?

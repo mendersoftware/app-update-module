@@ -23,6 +23,7 @@ function bt_get_functions_by_prefix() {
 
 function bt_call_failure_hook() {
     local -r phase="$1"
+    local f
     shift
     while read -r f; do
         . <(echo "$f" \""$@"\")
