@@ -23,7 +23,9 @@ fi
 
 docker_compose_cmd=${DOCKER_COMPOSE_COMMAND:-"docker-compose"}
 docker_cmd=${DOCKER_COMMAND:-"docker"}
-delta_cmd=${XDELTA_COMMANDLINE:-"xdelta3 -d -s"}
+delta_executable=${XDELTA_COMMAND:-"xdelta3"}
+delta_arguments=${XDELTA_ARGS:-"-d -s"}
+delta_cmd="${delta_executable} ${delta_arguments}"
 
 unpack_image() {
     local input_file="$1"
@@ -243,6 +245,12 @@ app_stop() {
     $docker_compose_cmd --project-directory "$manifests_dir" down >> "$manifests_dir"/compose.log 2>&1
 }
 
+app_requirements() {
+    echo "$docker_compose_cmd":error
+    echo "$docker_cmd":error
+    echo "$delta_executable":warning
+}
+
 case "$1" in
     SAVE)
         shift
@@ -283,6 +291,10 @@ case "$1" in
         ;;
     HEALTHY)
         true
+        ;;
+    REQS)
+        shift
+        app_requirements
         ;;
     *)
         echo "ERROR: unknown API call: $@"

@@ -52,6 +52,10 @@ of software to a subset that can be deployed using the following set of abstract
   * query for the state of the application, see if it is running and working properly
   * Examples: in the container case this is the readiness probe, for python applications
     it can be: calling user-provided executable to verify that the application works
+* REQS
+  * internal message, return a list of required executable paths, with error level in case of absence
+  * Examples: return of "tar:error" means that `tar` is required and if not present it is an error
+  * Examples: return of "xdelta3:warning" means that `xdelta3` is required, but if not present should result in an error
 
 There are many ways to deploy an application to a device. One of them is: containers.
 There is a number of available solutions which allow you to declare what images
@@ -216,6 +220,11 @@ Returns true if application is healthy and ready to use
 
 Parameters:
 * `application_name` -- application name
+
+#### HEALTHY
+Returns a set of lines in the format: "$cmd:error" or "$cmd:warning" where `$cmd` stands for
+a required command, and `error` and `warning` instruct the caller on further actions
+in case it is missing.
 
 ### Additional settings
 
