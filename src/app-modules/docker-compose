@@ -183,7 +183,7 @@ wait_for_running() {
         sleep "$RUNNING_STATE_TIMEOUT_S"
         $docker_compose_cmd --project-directory "$manifests_dir" ps -q > "$out_tmp"
         count=$(cat "$out_tmp" | wc -l)
-        expected_count=$(docker-compose --project-directory "$manifests_dir" config --images | wc -l)
+        expected_count=$($docker_compose_cmd --project-directory "$manifests_dir" config --images | wc -l)
         if test $count -ge $expected_count; then
             cat "$out_tmp" | xargs -n1 -I{} docker inspect {} | jq -r '.[] | "\(.State.Running) \(.State.Status)"' | grep -qv 'true running'
             if test $? -eq 1; then
