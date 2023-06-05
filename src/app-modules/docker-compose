@@ -21,8 +21,12 @@ if test -f "$MODULE_CONFIG_FILE"; then
     . "$MODULE_CONFIG_FILE"
 fi
 
-docker_compose_cmd=${DOCKER_COMPOSE_COMMAND:-"docker-compose"}
 docker_cmd=${DOCKER_COMMAND:-"docker"}
+docker_compose_cmd="${docker_cmd} compose"
+if [ -n "$USE_LEGACY_DOCKER_COMPOSE" ]; then
+  docker_compose_cmd="docker-compose"
+fi
+
 delta_executable=${XDELTA_COMMAND:-"xdelta3"}
 delta_arguments=${XDELTA_ARGS:-"-d -s"}
 delta_cmd="${delta_executable} ${delta_arguments}"
