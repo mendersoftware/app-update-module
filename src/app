@@ -20,15 +20,8 @@ FILES="$2"
 
 temp_dir="$FILES"/tmp
 
-cleanup() {
-    set +e
-    test -f "$PERSISTENT_STORE"/.rw_test && rm -f "$PERSISTENT_STORE"/.rw_test
-}
-
-trap cleanup 1 2 3 6 15
-
 CONFIG_FILE="/etc/mender/mender-app.conf"
-PERSISTENT_STORE="/data/mender-app"
+PERSISTENT_STORE="/var/lib/mender/app-modules"
 APP_MODULE_DIR="/usr/share/mender/app-modules/v1"
 
 version=""
@@ -41,15 +34,6 @@ options=""
 
 if test -f "$CONFIG_FILE"; then
     . "$CONFIG_FILE"
-fi
-
-if test -d "$PERSISTENT_STORE"; then
-    if touch "$PERSISTENT_STORE"/.rw_test; then
-        rm -f "$PERSISTENT_STORE"/.rw_test
-    else
-        echo "ERROR: cant write to persistent_store in $PERSISTENT_STORE"
-        exit 1
-    fi
 fi
 
 CONFIG_HAS_XDELTA3_CMD="xdelta3"
@@ -207,6 +191,7 @@ handle_artifact() {
     # and removing all else
 }
 
+rc=0
 case "$STATE" in
 
     NeedsArtifactReboot)
@@ -218,6 +203,20 @@ case "$STATE" in
         ;;
 
     ArtifactInstall)
+        # Ensure PERSISTENT_STORE exists
+        mkdir -p "$PERSISTENT_STORE"
+        set +e
+        if touch "$PERSISTENT_STORE"/.rw_test; then
+            rm -f "$PERSISTENT_STORE"/.rw_test
+            rc=$?
+            if test $rc -ne 0; then
+                exit $rc
+            fi
+            set -e
+        else
+            echo "ERROR: cant write to persistent_store in $PERSISTENT_STORE" 1>&2
+            exit 1
+        fi
         parse_metadata "$FILES"/header/meta-data "$FILES"/header/header-info
         assert_requirements
         rc=$?

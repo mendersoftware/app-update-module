@@ -34,19 +34,21 @@ tar zxvf "${artifact_dir}"/data/0000.tar.gz -C "${artifact_dir}"
 cp "${artifact_dir}"/images.tar.gz "${files_dir}/"
 cp "${artifact_dir}"/manifests.tar.gz "${files_dir}/"
 
+source conf/mender-app.conf
+
 mkdir -p /usr/share/mender/app-modules/v1
 mkdir -p /usr/share/mender/modules/v3
 cp src/app /usr/share/mender/modules/v3/
 cp src/app-modules/docker-compose /usr/share/mender/app-modules/v1/
 chmod 755 /usr/share/mender/modules/v3/app
 chmod 755 /usr/share/mender/app-modules/v1/docker-compose
-mkdir -p /data/mender-app /etc/mender
+mkdir -p $PERSISTENT_STORE /etc/mender
 cp conf/mender-app.conf /etc/mender/
 /usr/share/mender/modules/v3/app ArtifactInstall "$(dirname ${files_dir})"
 sleep 4
-cat /data/mender-app/mapp64/manifests/*.yml
-cat /data/mender-app/mapp64/manifests/*.log
-grep -rniHF Pulling /data/mender-app/mapp64/manifests/*.log && false
+cat $PERSISTENT_STORE/mapp64/manifests/*.yml
+cat $PERSISTENT_STORE/mapp64/manifests/*.log
+grep -rniHF Pulling $PERSISTENT_STORE/mapp64/manifests/*.log && false
 echo
 sleep 16
 docker ps --format "{{.Image}} {{.Command}}" | sort
