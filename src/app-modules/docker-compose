@@ -21,11 +21,37 @@ if test -f "$MODULE_CONFIG_FILE"; then
     . "$MODULE_CONFIG_FILE"
 fi
 
-docker_compose_cmd=${DOCKER_COMPOSE_COMMAND:-"docker-compose"}
+_docker_compose_cmd=""
 docker_cmd=${DOCKER_COMMAND:-"docker"}
 delta_executable=${XDELTA_COMMAND:-"xdelta3"}
 delta_arguments=${XDELTA_ARGS:-"-d -s"}
 delta_cmd="${delta_executable} ${delta_arguments}"
+
+_discover_compose() {
+    local rc=0
+    if docker compose version < /dev/null > /dev/null 2>&1; then
+        _docker_compose_cmd="docker compose"
+    elif docker-compose version < /dev/null > /dev/null 2>&1; then
+        _docker_compose_cmd="docker-compose"
+    else
+        echo "error: could not find executable for Docker Compose" 1>&2
+        echo "error: is Docker Compose installed?" 1>&2
+        rc=127
+    fi
+    return $rc
+}
+
+docker_compose_cmd() {
+    if [ -z "${_docker_compose_cmd}" ]; then
+        local rc=0
+        _discover_compose
+        rc=$?
+        if test $rc -ne 0; then
+            return $rc
+        fi
+    fi
+    $_docker_compose_cmd $@
+}
 
 unpack_image() {
     local input_file="$1"
@@ -181,13 +207,13 @@ wait_for_running() {
     i=1
     while test "$all_running" = "false"; do
         sleep "$RUNNING_STATE_TIMEOUT_S"
-        $docker_compose_cmd --project-directory "$manifests_dir" ps -q > "$out_tmp"
+        docker_compose_cmd --project-directory "$manifests_dir" ps -q > "$out_tmp"
         count=$(cat "$out_tmp" | wc -l)
         expected_count=$(docker-compose --project-directory "$manifests_dir" config --images | wc -l)
         if test $count -ge $expected_count; then
             cat "$out_tmp" | xargs -n1 -I{} docker inspect {} | jq -r '.[] | "\(.State.Running) \(.State.Status)"' | grep -qv 'true running'
             if test $? -eq 1; then
-                $docker_compose_cmd --project-directory "$manifests_dir" ps -q | xargs -n1 -I{} docker inspect {} | jq -r '.[] | "\(.State.Running) \(.State.Status)"'
+                docker_compose_cmd --project-directory "$manifests_dir" ps -q | xargs -n1 -I{} docker inspect {} | jq -r '.[] | "\(.State.Running) \(.State.Status)"'
                 docker ps
                 rc=0
                 break
@@ -224,13 +250,13 @@ app_rollout() {
     local rc
     local message
 
-    $docker_compose_cmd --project-directory "$manifests_dir" up -d > "$manifests_dir"/compose.log 2>&1 &
+    docker_compose_cmd --project-directory "$manifests_dir" up -d > "$manifests_dir"/compose.log 2>&1 &
     pid=$!
     wait_for_running "$manifests_dir"
     rc="$?"
     if test "$rc" != "0"; then
         echo "app_rollout failed to start composition, logs follow:" 1>&2
-        $docker_compose_cmd --project-directory "$manifests_dir" logs -t 1>&2
+        docker_compose_cmd --project-directory "$manifests_dir" logs -t 1>&2
         message=$(rc_to_message "$rc")
         echo "app_rollout failed due to: $message." 1>&2
         return $rc
@@ -242,13 +268,23 @@ app_stop() {
     local application_name="$1"
     local manifests_dir="$2"
 
-    $docker_compose_cmd --project-directory "$manifests_dir" down >> "$manifests_dir"/compose.log 2>&1
+    docker_compose_cmd --project-directory "$manifests_dir" down >> "$manifests_dir"/compose.log 2>&1
 }
 
 app_requirements() {
-    echo "$docker_compose_cmd":error
-    echo "$docker_cmd":error
-    echo "$delta_executable":warning
+    local rc=0
+    if ! docker --version > /dev/null < /dev/null 2>&1; then
+        echo "error: cannot find command docker in PATH"
+        echo "error: is Docker installed?"
+        rc=127
+    elif ! docker version > /dev/null; then
+        echo "error: failed to connect with the Docker API"
+        rc=1
+    else
+        _discover_compose
+        rc=$?
+    fi
+    return $rc
 }
 
 case "$1" in
