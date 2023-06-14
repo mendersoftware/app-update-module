@@ -64,7 +64,6 @@ delta_cmd="xdelta3 -e -s"
 declare -a device_types
 artifact_name=""
 output_path="app-artifact.mender"
-passthrough=0
 passthrough_args=""
 version="1.0"
 orchestrator=""
@@ -77,11 +76,6 @@ deep_delta=false
 set +u
 while [ -n "$1" ]; do
     set -u
-    if test $passthrough -eq 1; then
-        passthrough_args="$passthrough_args $1"
-        shift
-        continue
-    fi
     case "$1" in
         --application-name | -a)
             if [ -z "$2" ]; then
@@ -154,8 +148,9 @@ while [ -n "$1" ]; do
             exit 0
             ;;
         --)
-            passthrough=1
             shift
+            passthrough_args="$@"
+            break
             ;;
         -*)
             echo "Error: unsupported option $1" >&2
