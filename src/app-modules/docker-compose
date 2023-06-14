@@ -207,11 +207,17 @@ app_rollout() {
     local manifests_dir="$2"
     local rc
 
-    docker_compose_cmd --project-directory "$manifests_dir" up -d --wait > "$manifests_dir"/compose.log 2>&1
+    docker_compose_cmd \
+        --project-directory "$manifests_dir" \
+        --project-name "$application_name" \
+        up -d --wait > "$manifests_dir"/compose.log 2>&1
     rc="$?"
     if test "$rc" != "0"; then
         echo "app_rollout failed to start composition, logs follow:" 1>&2
-        docker_compose_cmd --project-directory "$manifests_dir" logs -t 1>&2
+        docker_compose_cmd \
+            --project-directory "$manifests_dir" \
+            --project-name "$application_name" \
+            logs -t 1>&2
         return $rc
     fi
     return 0
@@ -221,7 +227,10 @@ app_stop() {
     local application_name="$1"
     local manifests_dir="$2"
 
-    docker_compose_cmd --project-directory "$manifests_dir" down >> "$manifests_dir"/compose.log 2>&1
+    docker_compose_cmd \
+        --project-directory "$manifests_dir" \
+        --project-name "$application_name" \
+        down >> "$manifests_dir"/compose.log 2>&1
 }
 
 app_requirements() {
