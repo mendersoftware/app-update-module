@@ -52,7 +52,7 @@ _discover_compose() {
 }
 
 docker_compose_cmd() {
-    if [ -z "${_docker_compose_cmd}" ]; then
+    if test -z "${_docker_compose_cmd}"; then
         local rc=0
         _discover_compose
         rc=$?
@@ -60,7 +60,7 @@ docker_compose_cmd() {
             return $rc
         fi
     fi
-    $_docker_compose_cmd $@
+    $_docker_compose_cmd "$@"
 }
 
 unpack_image() {
@@ -235,13 +235,17 @@ app_stop() {
 
 app_requirements() {
     local rc=0
-    if ! docker --version > /dev/null < /dev/null 2>&1; then
+    $docker_cmd --version > /dev/null < /dev/null 2>&1
+    rc=$?
+    if test $rc -ne 0; then
         echo "error: cannot find command docker in PATH"
         echo "error: is Docker installed?"
-        rc=127
-    elif ! docker version > /dev/null; then
+        return $rc
+    fi
+    $docker_cmd version > /dev/null
+    rc=$?
+    if test $rc -ne 0; then
         echo "error: failed to connect with the Docker API"
-        rc=1
     else
         _discover_compose
         rc=$?

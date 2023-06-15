@@ -70,7 +70,7 @@ assert_requirements() {
         echo "warning: cannot find command '${CONFIG_HAS_XDELTA3_CMD}' in PATH." 1>&2
     fi
     $app_sub_module REQS
-    if [ $? -ne 0 ]; then
+    if test $? -ne 0; then
         rc=1
     fi
 
