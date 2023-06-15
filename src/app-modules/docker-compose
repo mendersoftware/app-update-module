@@ -210,7 +210,7 @@ app_rollout() {
     docker_compose_cmd \
         --project-directory "$manifests_dir" \
         --project-name "$application_name" \
-        up -d --wait > "$manifests_dir"/compose.log 2>&1
+        up -d --wait --remove-orphans > "$manifests_dir"/compose.log 2>&1
     rc="$?"
     if test "$rc" != "0"; then
         echo "app_rollout failed to start composition, logs follow:" 1>&2
