@@ -457,6 +457,7 @@ mender-artifact write module-image \
     --meta-data "${temp_dir}/metadata.json" \
     -f "${temp_dir}/images.tar.gz" \
     -f "${temp_dir}/manifests.tar.gz" \
+    --software-name "$application_name" \
     $passthrough_args
 
 echo "Artifact $output_path generated successfully:"
