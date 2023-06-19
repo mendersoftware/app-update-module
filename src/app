@@ -58,37 +58,23 @@ delta_cmd="${CONFIG_HAS_XDELTA3_CMD} -d -s"
 tar_decompress_cmd="${CONFIG_HAS_TAR_CMD} -xzvf"
 
 assert_requirements() {
-    local req_message
-    local command
-    local level
-    local COMMAND_NOT_FOUND_RC_THRESHOLD=100
-    local COMMAND_MISSING_ERROR_LEVEL="error"
+    local cmd
     local rc=0
-    local out_tmp
-
-    out_tmp=$(mktemp)
-    $app_sub_module REQS > "$out_tmp"
-    echo "${CONFIG_HAS_TAR_CMD}:error" >> "$out_tmp"
-    echo "${CONFIG_HAS_XDELTA3_CMD}:error" >> "$out_tmp"
     set +e
-    while IFS=":" read -r command level; do
-        "$command" < /dev/null > /dev/null 2>&1
-        if test $? -gt $COMMAND_NOT_FOUND_RC_THRESHOLD; then
-            echo "$level cannot find required command $command on PATH."
-            if test "$level" = "$COMMAND_MISSING_ERROR_LEVEL"; then
-                # only if the sub-module reported error level on absence of the command we bail out
-                rc=1
-            fi
-        fi
-    done < "$out_tmp"
-    set -e
-    rm -f "$out_tmp"
 
-    if test $rc -eq 1; then
-        # exit here is on purpose, as per the name of the function the update module will exit with an error
-        exit $rc
+    if ! $CONFIG_HAS_TAR_CMD --version < /dev/null > /dev/null 2>&1; then
+        echo "error: cannot find required command '${CONFIG_HAS_TAR_CMD}' in PATH." 1>&2
+        rc=127
     fi
-    return 0
+    if ! $CONFIG_HAS_XDELTA3_CMD < /dev/null > /dev/null 2>&1; then
+        echo "warning: cannot find command '${CONFIG_HAS_XDELTA3_CMD}' in PATH." 1>&2
+    fi
+    $app_sub_module REQS
+    if test $? -ne 0; then
+        rc=1
+    fi
+    set -e
+    return $rc
 }
 
 parse_metadata() {
@@ -234,11 +220,15 @@ case "$STATE" in
     ArtifactInstall)
         parse_metadata "$FILES"/header/meta-data "$FILES"/header/header-info
         assert_requirements
+        rc=$?
+        if test $rc -ne 0; then
+            exit $rc
+        fi
         handle_artifact "$FILES"/files
         ;;
 
-    ArtifactRollback) ;;
+    ArtifactRollback)
+        true
+        ;;
 
 esac
-
-exit 0
