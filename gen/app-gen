@@ -44,6 +44,9 @@ EOF
 }
 
 show_help_and_exit_error() {
+    if test $# -gt 0; then
+      echo $@ 1>&2
+    fi
     show_help
     exit 1
 }
@@ -76,12 +79,19 @@ deep_delta=false
 set +u
 while test $# -gt 0; do
     set -u
-    case "$1" in
+    flag=${1%=*}
+    value=""
+    if test "$flag" != "$1"; then # --<flag>=<value>
+      value="${1#*=}"
+    elif test $# -gt 1; then # --<flag> <value>
+      value=$2
+    fi
+    case "$flag" in
         --application-name | -a)
-            if [ -z "$2" ]; then
-                show_help_and_exit_error
+            if [ -z "$value" ]; then
+                show_help_and_exit_error "Flag \"$flag\" is missing a value."
             fi
-            application_name="$2"
+            application_name="$value"
             if [[ $application_name =~ $APPLICATION_NAME_ALLOWED_REGEX ]]; then
                 echo "ERROR: application name must contain only alpha-numerics, _ or -" >&2
                 show_help_and_exit_error
@@ -89,33 +99,33 @@ while test $# -gt 0; do
             shift 2
             ;;
         --manifests-dir | -m)
-            if [ -z "$2" ]; then
-                show_help_and_exit_error
+            if [ -z "$value" ]; then
+                show_help_and_exit_error "Flag \"$flag\" is missing a value."
             fi
-            manifests_dir="$2"
+            manifests_dir="$value"
             shift 2
             ;;
         --orchestrator | -r)
-            if [ -z "$2" ]; then
-                show_help_and_exit_error
+            if [ -z "$value" ]; then
+                show_help_and_exit_error "Flag \"$flag\" is missing a value."
             fi
-            orchestrator="$2"
+            orchestrator="$value"
             shift 2
             ;;
         --platform | -p)
-            if [ -z "$2" ]; then
-                show_help_and_exit_error
+            if [ -z "$value" ]; then
+                show_help_and_exit_error "Flag \"$flag\" is missing a value."
             fi
-            platform="$2"
+            platform="$value"
             shift 2
             ;;
         --image | -i)
             # --image docker.io/library/debian:11,docker.io/library/debian:latest@sha256:a94cd7c7d58f483affd5937853ad4d24caa18cd7c2ec9ef65a9e528dfbc5eb07 --image docker.io/library/postgres:15.1
-            if [ -z "$2" ]; then
-                show_help_and_exit_error
+            if [ -z "$value" ]; then
+                show_help_and_exit_error "Flag \"$flag\" is missing a value."
             fi
-            images+=($(echo "$2" | cut -f1 -d,)) # current
-            images+=($(echo "$2" | cut -f2 -d,)) # new, if current!=new then we need to generate delta.
+            images+=($(echo "$value" | cut -f1 -d,)) # current
+            images+=($(echo "$value" | cut -f2 -d,)) # new, if current!=new then we need to generate delta.
             shift 2
             ;;
         --deep-delta | -d)
@@ -123,24 +133,24 @@ while test $# -gt 0; do
             shift 1
             ;;
         --device-type | -t)
-            if [ -z "$2" ]; then
-                show_help_and_exit_error
+            if [ -z "$value" ]; then
+                show_help_and_exit_error "Flag \"$flag\" is missing a value."
             fi
-            device_types+=("-t" "$2")
+            device_types+=("-t" "$value")
             shift 2
             ;;
         --artifact-name | -n)
-            if [ -z "$2" ]; then
-                show_help_and_exit_error
+            if [ -z "$value" ]; then
+                show_help_and_exit_error "Flag \"$flag\" is missing a value."
             fi
-            artifact_name=$2
+            artifact_name=$value
             shift 2
             ;;
         --output-path | -o)
-            if [ -z "$2" ]; then
-                show_help_and_exit_error
+            if [ -z "$value" ]; then
+                show_help_and_exit_error "Flag \"$flag\" is missing a value."
             fi
-            output_path=$2
+            output_path=$value
             shift 2
             ;;
         -h | --help)
@@ -153,10 +163,11 @@ while test $# -gt 0; do
             break
             ;;
         -*)
-            echo "Error: unsupported option $1" >&2
+            echo "Error: unsupported option $flag" >&2
             show_help_and_exit_error
             ;;
         *)
+            echo "Unexpected argument: \"${1}\""
             shift
             ;;
     esac
