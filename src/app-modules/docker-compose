@@ -29,8 +29,12 @@ delta_cmd="${delta_executable} ${delta_arguments}"
 
 _discover_compose() {
     local rc=0
-    if docker compose version < /dev/null > /dev/null 2>&1; then
-        _docker_compose_cmd="docker compose"
+    if test -n "$DOCKER_COMPOSE_COMMAND"; then
+        _docker_compose_cmd="$DOCKER_COMPOSE_COMMAND"
+        $_docker_compose_cmd version < /dev/null > /dev/null 2>&1
+        rc=$?
+    elif docker compose version < /dev/null > /dev/null 2>&1; then
+        _docker_compose_cmd="$docker_cmd compose"
     elif docker-compose version < /dev/null > /dev/null 2>&1; then
         _docker_compose_cmd="docker-compose"
     else
