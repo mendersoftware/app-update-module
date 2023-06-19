@@ -213,6 +213,7 @@ app_rollout() {
     rc="$?"
     if test "$rc" != "0"; then
         echo "app_rollout failed to start composition, logs follow:" 1>&2
+        cat "$manifests_dir/compose.log" 1>&2
         docker_compose_cmd \
             --project-directory "$manifests_dir" \
             --project-name "$application_name" \
