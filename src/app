@@ -73,7 +73,7 @@ assert_requirements() {
     if test $? -ne 0; then
         rc=1
     fi
-
+    set -e
     return $rc
 }
 

@@ -33,7 +33,7 @@ _discover_compose() {
         _docker_compose_cmd="$DOCKER_COMPOSE_COMMAND"
         $_docker_compose_cmd version < /dev/null > /dev/null 2>&1
         rc=$?
-    elif docker compose version < /dev/null > /dev/null 2>&1; then
+    elif $docker_cmd compose version < /dev/null > /dev/null 2>&1; then
         _docker_compose_cmd="$docker_cmd compose"
     elif docker-compose version < /dev/null > /dev/null 2>&1; then
         _docker_compose_cmd="docker-compose"
@@ -201,15 +201,10 @@ app_save() {
     $docker_cmd image save "$url" -o "$output_file"
 }
 
-RUNNING_STATE_TIMEOUT_S=4
-RC_COMPOSITION_NOT_RUNNING=4
-RC_TIMEOUT_STARTING=8
-RC_MAX_ITERATIONS_EXHAUSTED=16
-
 app_rollout() {
     local application_name="$1"
     local manifests_dir="$2"
-    local rc
+    local rc=0
 
     docker_compose_cmd \
         --project-directory "$manifests_dir" \
@@ -242,7 +237,7 @@ app_requirements() {
     $docker_cmd --version > /dev/null < /dev/null 2>&1
     rc=$?
     if test $rc -ne 0; then
-        echo "error: cannot find command docker in PATH"
+        echo "error: cannot find command \"${docker_cmd}\" in PATH"
         echo "error: is Docker installed?"
         return $rc
     fi
