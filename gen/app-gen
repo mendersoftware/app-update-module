@@ -74,7 +74,7 @@ declare -a images_shas
 deep_delta=false
 
 set +u
-while [ -n "$1" ]; do
+while test $# -gt 0; do
     set -u
     case "$1" in
         --application-name | -a)
