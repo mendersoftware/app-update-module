@@ -1,0 +1,165 @@
+#!/bin/sh
+# Copyright 2023 Northern.tech AS
+#
+#    Licensed under the Apache License, Version 2.0 (the "License");
+#    you may not use this file except in compliance with the License.
+#    You may obtain a copy of the License at
+#
+#        http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS,
+#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#    See the License for the specific language governing permissions and
+#    limitations under the License.
+
+MODULE_CONFIG_FILE="/etc/mender/mender-app-k8s.conf"
+
+if test -f "$MODULE_CONFIG_FILE"; then
+    . "$MODULE_CONFIG_FILE"
+fi
+
+kubectl_cmd=${KUBECTL_COMMAND:-"kubectl"}
+ctr_cmd=${CTR_COMMAND:-"ctr"}
+
+if test "${K8S_NAMESPACE}" != ""; then
+    namespace_argument="--namespace=${K8S_NAMESPACE}"
+fi
+
+if test "${K8S_CTR_ADDRESS}" != ""; then
+    address_argument="--address ${K8S_CTR_ADDRESS}"
+fi
+
+if test "${MENDER_APP_UPDATE_MODULE_PLATFORM}" != ""; then
+    # multiple platforms: we can support them via MENDER_APP_UPDATE_MODULE_PLATFORM=linux/arm64/v8,linux/arm/v7
+    # and split into: platform_argument="--platform \"linux/arm64/v8\" --platform \"linux/arm/v7\""
+    platform_argument="--platform ${MENDER_APP_UPDATE_MODULE_PLATFORM}"
+fi
+
+app_load() {
+    local application_name="$1"
+    local url="$2"
+    local input_file="$3"
+    local url_current="$4"
+
+    if test "$OPTIONS" = "deep_delta"; then
+      echo "deep deltas are not supported with containerd based images at in this version" 1>&2
+      return 1
+    fi
+
+    $ctr_cmd $address_argument image import "$input_file" $platform_argument 1>&2
+}
+
+app_save() {
+    local application_name="$1"
+    local url="$2"
+    local output_file="$3"
+
+    $ctr_cmd image export $platform_argument "$output_file" "$url" 1>&2
+}
+
+create_ns_if_needed() {
+  local ns="${1}"
+
+  if test "$ns" = ""; then
+      return 0
+  fi
+
+  $kubectl_cmd get namespaces --field-selector "metadata.name=${ns}" --no-headers | grep -q "$ns"
+  if test $? -ne 0; then
+    $kubectl_cmd create namespace "$ns" 1>&2
+  fi
+}
+
+app_rollout() {
+    local application_name="$1"
+    local manifests_dir="$2"
+    local rc=0
+
+    create_ns_if_needed "$K8S_NAMESPACE"
+    $kubectl_cmd apply -Rf "${manifests_dir}" $namespace_argument 1>&2
+    rc="$?"
+
+    if test "$rc" != "0"; then
+        echo "app_rollout failed to apply the manifest with $kubectl_cmd apply -Rf ${manifests_dir} ${namespace_argument} " 1>&2
+        return $rc
+    fi
+    return 0
+}
+
+app_stop() {
+    local application_name="$1"
+    local manifests_dir="$2"
+
+    $kubectl_cmd delete -Rf "${manifests_dir}" "$namespace_argument" 1>&2
+}
+
+app_requirements() {
+    local rc=0
+    $kubectl_cmd version > /dev/null
+    rc=$?
+    if test $rc -ne 0; then
+        echo "error: cannot find command \"${kubectl_cmd}\" in PATH"
+        echo "error: are k8s installed?"
+        return $rc
+    fi
+    $ctr_cmd $address_argument --version > /dev/null
+    rc=$?
+    if test $rc -ne 0; then
+        echo "error: cannot find command \"${ctr_cmd}\" in PATH"
+        echo "error: is containerd cli installed?"
+        return $rc
+    fi
+    return $rc
+}
+
+case "$1" in
+    SAVE)
+        shift
+        app_save "$@"
+        ;;
+    LOAD)
+        shift
+        app_load "$@"
+        ;;
+    ROLLOUT)
+        shift
+        app_rollout "$@"
+        ;;
+    STOP)
+        shift
+        app_stop "$@"
+        ;;
+    EXPORT_MANIFEST)
+        true
+        ;;
+    LS_COMPONENTS)
+        true
+        ;;
+    DELETE)
+        true
+        ;;
+    ROLLBACK)
+        true
+        ;;
+    PURGE)
+        true
+        ;;
+    START)
+        true
+        ;;
+    ALIVE)
+        true
+        ;;
+    HEALTHY)
+        true
+        ;;
+    REQS)
+        shift
+        app_requirements
+        ;;
+    *)
+        echo "ERROR: unknown API call: $@"
+        exit 1
+        ;;
+esac

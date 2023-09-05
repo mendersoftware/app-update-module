@@ -49,6 +49,16 @@ test:acceptancetests:
     - docker:dind
   before_script:
     - apt update && apt install -yy bash wget xz-utils awscli docker.io curl make xdelta3 tree
+    - curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.20.0/kind-linux-amd64
+    - chmod +x ./kind
+    - mv ./kind /usr/bin/kind
+    - kind create cluster -n units
+    - kind get clusters
+    - curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
+    - chmod +x ./kubectl
+    - mv kubectl /usr/bin/
+    - kubectl cluster-info --context kind-units
+    - kubectl get pods -A
     - docker ps
     - docker info
     - mkdir -p ~/.docker/cli-plugins/
