@@ -11,6 +11,7 @@ echo
 status="starting"
 max_wait=128
 while [ $max_wait -gt 0 ]; do
+ kubectl get nodes -v=10
  status=`kubectl get nodes | tail -n+2 | awk '{print($2);}'`
  [ "$status" == "Ready" ] && break
  sleep 1
