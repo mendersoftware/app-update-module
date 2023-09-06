@@ -43,10 +43,8 @@ test:smoketests:
       - tests/gen/data/docker/output
     when: always
 
-test:acceptancetests:
+test:acceptancetestsk8s:
   image: ubuntu:20.04
-  services:
-    - docker:dind
   before_script:
     - apt update && apt install -yy bash wget xz-utils awscli docker.io curl make xdelta3 tree
     - curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
@@ -56,8 +54,17 @@ test:acceptancetests:
     - mv minikube-linux-amd64 /usr/bin/minikube
     - chmod 755 /usr/bin/minikube
     - minikube start
-    - sleep 1m
-    - kubectl get pods -A
+
+  script:
+    - sleep 120
+    - kubectl get pods
+ 
+test:acceptancetests:
+  image: ubuntu:20.04
+  services:
+    - docker:dind
+  before_script:
+    - apt update && apt install -yy bash wget xz-utils awscli docker.io curl make xdelta3 tree
     - docker ps
     - docker info
     - mkdir -p ~/.docker/cli-plugins/
