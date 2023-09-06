@@ -44,19 +44,8 @@ test:smoketests:
     when: always
 
 test:acceptancetestsk8s:
-  image: ubuntu:20.04
-  before_script:
-    - apt update && apt install -yy bash wget xz-utils awscli docker.io curl make xdelta3 tree
-    - curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
-    - chmod +x ./kubectl
-    - mv kubectl /usr/bin/
-    - curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
-    - mv minikube-linux-amd64 /usr/bin/minikube
-    - chmod 755 /usr/bin/minikube
-    - minikube start
-
+  image: rancher/k3s
   script:
-    - sleep 120
     - kubectl get pods
  
 test:acceptancetests:
