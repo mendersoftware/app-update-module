@@ -49,13 +49,13 @@ test:acceptancetests:
     - docker:dind
   before_script:
     - apt update && apt install -yy bash wget xz-utils awscli docker.io curl make xdelta3 tree
-    - wget https://github.com/rancher/k3s/releases/download/v1.18.4%2Bk3s1/k3s
-    - chmod 755 k3s
-    - mv k3s /usr/bin/
-    - k3s server --no-deploy=traefik  --docker --https-listen-port=8443 --node-name=node0 --tls-san=node0 >/dev/null 2>&1 &
     - curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
     - chmod +x ./kubectl
     - mv kubectl /usr/bin/
+    - curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+    - mv minikube-linux-amd64 /usr/bin/minikube
+    - chmod 755 /usr/bin/minikube
+    - minikube start
     - sleep 1m
     - kubectl get pods -A
     - docker ps
