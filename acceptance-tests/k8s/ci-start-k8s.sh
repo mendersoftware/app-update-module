@@ -6,6 +6,7 @@
 # create k8s cluster for testing
 log "creating $K8S_CLUSTER_NAME k8s cluster"
 kind create cluster --name="${K8S_CLUSTER_NAME}" --image kindest/node:${K8S_VERSION}
+export KUBECONFIG=/etc/kubernetes/admin.conf
 echo
 status="starting"
 max_wait=128

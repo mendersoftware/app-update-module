@@ -74,6 +74,7 @@ test:acceptancetests:k8s:
     - curl -Lo ./kind https://github.com/kubernetes-sigs/kind/releases/download/v0.6.1/kind-Linux-amd64
     - chmod 755 kind
     - mv kind /usr/bin/
+    - export KUBECONFIG=/etc/kubernetes/admin.conf
     - acceptance-tests/k8s/ci-prepare.sh
     - acceptance-tests/k8s/ci-start-k8s.sh
   script:
