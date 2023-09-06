@@ -45,6 +45,8 @@ test:smoketests:
 
 test:acceptancetests:k8s:
   image: debian:buster
+  services:
+    - docker:dind
   stage: test
   before_script:
     # Default value, will later be overwritten if successful
