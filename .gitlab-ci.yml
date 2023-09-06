@@ -48,6 +48,8 @@ test:acceptancetests:k8s:
   services:
     - docker:dind
   stage: test
+  tags:
+    - mender-qa-slave
   before_script:
     # Default value, will later be overwritten if successful
     - export DEBIAN_FRONTEND=noninteractive
