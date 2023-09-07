@@ -44,6 +44,7 @@ test:smoketests:
     when: always
 
 test:acceptancetests:
+  stage: test
   image: ubuntu:20.04
   services:
     - docker:dind
@@ -60,3 +61,59 @@ test:acceptancetests:
 
   script:
     - ./acceptance-tests/run.sh
+
+test:acceptancetests:k8s:
+  tags:
+    - mender-qa-worker-integration-tests
+  stage: test
+  image: docker:dind
+  variables:
+    DOCKER_CLIENT_TIMEOUT: 300
+    COMPOSE_HTTP_TIMEOUT: 300
+    TEST_SUITE: "open"
+  before_script:
+    - chmod o+rw /dev/kvm
+    - sysctl -w fs.inotify.max_user_instances=1024
+    - sysctl -w vm.max_map_count=262144
+    - apk --update add curl jq sysstat hdparm wget bash vim xz
+    - unset DOCKER_HOST
+    - unset DOCKER_TLS_VERIFY
+    - unset DOCKER_CERT_PATH
+    - export TINI_SUBREAPER=true # https://github.com/krallin/tini#subreaping
+    - |-
+      # The entrypoint script additionally uses docker-init as workarround of known
+      # containerd issue - https://github.com/docker-library/docker/issues/318
+      run_dockerd() {
+        /bin/sh -c '/usr/local/bin/dockerd-entrypoint.sh &>${CI_PROJECT_DIR}/dockerd.log &'
+      }
+      # Run dockerd and wait it to start
+      MAX_WAIT=60
+      while [ ${MAX_WAIT} -gt 0 ]; do
+        echo "[$(date +%F_%T)] MAX_WAIT=${MAX_WAIT}"; ps # Debug information
+        if docker version &>/dev/null; then
+          docker version # Verify that the dockerd is up and running
+          break
+        elif ! ps -o comm | grep -q -E "docker-init|dockerd|containerd|dockerd-entry|dind|openssl"; then
+          run_dockerd # Run dockerd if no related processes are running
+        fi
+        MAX_WAIT=$((${MAX_WAIT} - 1))
+        sleep 1
+      done
+    - curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.20.0/kind-linux-amd64
+    - chmod +x ./kind
+    - mv ./kind /usr/bin/kind
+  script:
+    - kind create cluster --name acc
+    - kind get clusters
+    - kind delete cluster --name acc
+    - curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
+    - chmod +x ./kubectl
+    - mv ./kubectl /usr/bin/kubectl
+    - kubectl get pods -A
+
+  after_script:
+    # Make sure docker clients (cli and python) interacts with dockerd via socket
+    - unset DOCKER_HOST
+    - unset DOCKER_TLS_VERIFY
+    - unset DOCKER_CERT_PATH
+
