@@ -109,6 +109,7 @@ test:acceptancetests:k8s:
     - chmod +x ./kubectl
     - mv ./kubectl /usr/bin/kubectl
     - kubectl get nodes
+    - kubectl get pods -A
 #     - kind create cluster --name acc
 #     - kind get clusters
 #     - kind delete cluster --name acc
