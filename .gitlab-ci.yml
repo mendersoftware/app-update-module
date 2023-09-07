@@ -103,13 +103,19 @@ test:acceptancetests:k8s:
     - chmod +x ./kind
     - mv ./kind /usr/bin/kind
   script:
-    - kind create cluster --name acc
-    - kind get clusters
-    - kind delete cluster --name acc
+    - wget -q -O - https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
+    - k3d cluster create acceptance-tests
     - curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
     - chmod +x ./kubectl
     - mv ./kubectl /usr/bin/kubectl
-    - kubectl get pods -A
+    - kubectl get nodes
+#     - kind create cluster --name acc
+#     - kind get clusters
+#     - kind delete cluster --name acc
+#     - curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
+#     - chmod +x ./kubectl
+#     - mv ./kubectl /usr/bin/kubectl
+#     - kubectl get pods -A
 
   after_script:
     # Make sure docker clients (cli and python) interacts with dockerd via socket
