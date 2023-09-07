@@ -109,7 +109,9 @@ test:acceptancetests:k8s:
     - chmod +x ./kubectl
     - mv ./kubectl /usr/bin/kubectl
     - kubectl get nodes
-    - kubectl create deployment postgres --image=postgres:15.4 --port=5432 --replicas=1;
+    - kubectl create deployment postgres --image=postgres:15.4 --port=5432 --replicas=1
+    - sleep 120
+    - kubectl get pods 
     - kubectl get pods -A
 #     - kind create cluster --name acc
 #     - kind get clusters
