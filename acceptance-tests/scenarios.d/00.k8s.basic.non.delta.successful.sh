@@ -23,6 +23,7 @@ function test_phase_setup() {
     wget 'https://downloads.mender.io/mender-artifact/master/linux/mender-artifact' -O /usr/bin/mender-artifact
     chmod 755 /usr/bin/mender-artifact
     mender-artifact --version || return 1
+    k3d cluster create acceptance-tests
     return 0
 }
 
