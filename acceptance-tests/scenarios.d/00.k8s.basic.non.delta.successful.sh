@@ -59,6 +59,7 @@ function test_phase_run() {
     sleep "${timeout_s}"
     kubectl get pods --namespace acceptance-tests
     kubectl get secrets --namespace acceptance-tests
+    kubectl get secrets --namespace acceptance-tests -o yaml postgres-secret
     kubectl get deployments --namespace acceptance-tests
     kubectl get services --namespace acceptance-tests
     return 0
