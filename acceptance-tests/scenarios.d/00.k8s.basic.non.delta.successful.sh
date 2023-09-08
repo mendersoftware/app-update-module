@@ -28,6 +28,8 @@ function test_phase_setup() {
     mv -f /usr/bin/ctr /usr/bin/ctr-prev
     ln -sf /bin/true /bin/ctr
     ln -sf /bin/true /usr/bin/ctr
+    wget -qO /usr/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64;
+    chmod 755 /usr/bin/yq
     return 0
 }
 
@@ -37,6 +39,8 @@ function test_phase_run() {
     local -r artifact_name=$(basename "$temp_dir")
     local image1
     local -r timeout_s=32
+    local password
+    local -r expected_password="aCPu8t0u"
 
     mv -f /var/lib/mender/device_type /var/lib/mender/device_type-prev
     echo "device_type=dev0" > /var/lib/mender/device_type
@@ -59,7 +63,8 @@ function test_phase_run() {
     sleep "${timeout_s}"
     kubectl get pods --namespace acceptance-tests
     kubectl get secrets --namespace acceptance-tests
-    kubectl get secrets --namespace acceptance-tests -o yaml postgres-secret
+    password=$(kubectl get secrets --namespace acceptance-tests -o yaml postgres-secret | /usr/bin/yq -r .data.password - | base64 --decode)
+    [[ "$password" == "$expected_password" ]] || return 3
     kubectl get deployments --namespace acceptance-tests
     kubectl get services --namespace acceptance-tests
     return 0
