@@ -33,7 +33,7 @@ function test_phase_setup() {
 
 function test_phase_run() {
     local -r temp_dir=$(mktemp -d)
-    local -r artifact_file="${temp_dir}/a0.mender"
+    local -r artifact_file="acceptance-tests/data/k8s-a0.mender"
     local -r artifact_name=$(basename "$temp_dir")
     local image1
     local -r timeout_s=32
@@ -41,7 +41,6 @@ function test_phase_run() {
     mv -f /var/lib/mender/device_type /var/lib/mender/device_type-prev
     echo -ne "dev0" > /var/lib/mender/device_type
     echo "entering run phase"
-    artifact_file="acceptance-tests/data/k8s-a0.mender"
 #    image1=docker.io/library/memcached:1.6.18-alpine
 #    image1=docker.io/library/postgres:15.4
 #    "${GENERATOR:-./gen/app-gen}" \
