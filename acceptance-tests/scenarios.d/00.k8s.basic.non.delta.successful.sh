@@ -39,7 +39,7 @@ function test_phase_run() {
     local -r timeout_s=32
 
     mv -f /var/lib/mender/device_type /var/lib/mender/device_type-prev
-    echo -ne "dev0" > /var/lib/mender/device_type
+    echo "device_type=dev0" > /var/lib/mender/device_type
     echo "entering run phase"
 #    image1=docker.io/library/memcached:1.6.18-alpine
 #    image1=docker.io/library/postgres:15.4
