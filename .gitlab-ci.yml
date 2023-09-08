@@ -70,6 +70,8 @@ test:acceptancetests:
     - ctr --help
     - kubectl get pods -A
     - /usr/bin/containerd &
+    - ln -sf /bin/true /bin/ctr
+    - ln -sf /bin/true /usr/bin/ctr
 
   script:
     - ./acceptance-tests/run.sh
