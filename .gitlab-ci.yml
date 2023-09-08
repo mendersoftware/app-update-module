@@ -69,6 +69,7 @@ test:acceptancetests:
     - ps axuw
     - ctr --help
     - kubectl get pods -A
+    - /usr/bin/containerd &
 
   script:
     - ./acceptance-tests/run.sh
