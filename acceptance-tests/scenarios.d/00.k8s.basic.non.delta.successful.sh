@@ -24,6 +24,7 @@ function test_phase_setup() {
     chmod 755 /usr/bin/mender-artifact
     mender-artifact --version || return 1
     k3d cluster create acceptance-tests
+    kubectl get nodes
     return 0
 }
 
