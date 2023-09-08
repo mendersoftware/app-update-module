@@ -66,11 +66,9 @@ test:acceptancetests:
     - mv ./kubectl /usr/bin/kubectl
     - sleep 32
     - ps axuw
-    - ctr --help
-    - kubectl get pods -A
+#    - ctr --help
+#    - kubectl get pods -A
 #    - /usr/bin/containerd &
-    - ln -sf /bin/true /bin/ctr
-    - ln -sf /bin/true /usr/bin/ctr
 
   script:
     - ./acceptance-tests/run.sh

@@ -25,6 +25,8 @@ function test_phase_setup() {
     mender-artifact --version || return 1
     k3d cluster create acceptance-tests
     kubectl get nodes
+    ln -sf /bin/true /bin/ctr
+    ln -sf /bin/true /usr/bin/ctr
     return 0
 }
 
@@ -33,7 +35,6 @@ function test_phase_run() {
     local -r artifact_file="${temp_dir}/a0.mender"
     local -r artifact_name=$(basename "$temp_dir")
     local image1
-    local image2
     local -r timeout_s=32
 
     echo "entering run phase"
