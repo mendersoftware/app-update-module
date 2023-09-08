@@ -49,7 +49,7 @@ test:acceptancetests:
   services:
     - docker:dind
   before_script:
-    - apt update && apt install -yy bash wget xz-utils awscli docker.io curl make xdelta3 tree
+    - apt update && apt install -yy bash wget xz-utils awscli docker.io curl make xdelta3 tree containerd
     - docker ps
     - docker info
     - mkdir -p ~/.docker/cli-plugins/
@@ -65,9 +65,8 @@ test:acceptancetests:
     - chmod +x ./kubectl
     - mv ./kubectl /usr/bin/kubectl
     - kubectl get nodes
-    - kubectl create deployment postgres --image=postgres:15.4 --port=5432 --replicas=1
     - sleep 32
-    - kubectl get pods
+    - ps axuw
     - kubectl get pods -A
 
   script:
