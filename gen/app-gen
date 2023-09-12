@@ -17,6 +17,8 @@ set -e
 set -u
 
 APPLICATION_NAME_ALLOWED_REGEX="[^a-zA-Z0-9_-]"
+K8S_ORCHESTRATOR="k8s"
+DOCKER_COMPOSE_ORCHESTRATOR="docker-compose"
 
 show_help() {
     cat << EOF
@@ -25,7 +27,7 @@ Simple tool to generate Mender Artifact suitable for App Update Module
 
 Usage: $0 [options] [-- [options-for-mender-artifact] ]
 
-    Options: [ -n|--artifact-name -t|--device-type -o|--output_path -i|--image -d|--deep-delta -p|--platform -r|--orchestrator -m|--manifests-dir -h|--help -a|--application-name ]
+    Options: [ -n|--artifact-name -t|--device-type -o|--output_path -i|--image -d|--deep-delta -p|--platform -r|--orchestrator -o|--k8s-ctr-address -c|--k8s-namespace -s|--manifests-dir -m|--help -h|--application-name -a]
 
         --artifact-name     - Artifact name
         --device-type       - Target device type identification (can be given more than once)
@@ -35,6 +37,8 @@ Usage: $0 [options] [-- [options-for-mender-artifact] ]
         --manifests-dir     - Directory containing orchestrator-specific manifests describing the deployment
         --platform          - Platform of the images, e.g.: linux/arm/v7
         --orchestrator      - Name of the orchestrator, and name of the sub-module, e.g.: docker-compose
+        --k8s-ctr-address   - k8s orchestrator specific: containerd address, e.g.: /run/k3s/containerd/containerd.sock
+        --k8s-namespace     - k8s orchestrator specific: kubernetes target namespace, e.g.: default
         --application-name  - Name of the application running on a device, must contain only characters from the class $APPLICATION_NAME_ALLOWED_REGEX
         --help              - Show help and exit
 
@@ -95,11 +99,25 @@ while test $# -gt 0; do
             manifests_dir="$2"
             shift 2
             ;;
-        --orchestrator | -r)
+        --orchestrator | -o)
             if [ -z "$2" ]; then
                 show_help_and_exit_error
             fi
             orchestrator="$2"
+            shift 2
+            ;;
+        --k8s-ctr-address | -c)
+            if [ -z "$2" ]; then
+                show_help_and_exit_error
+            fi
+            k8s_ctr_address="$2"
+            shift 2
+            ;;
+        --k8s-namespace | -s)
+            if [ -z "$2" ]; then
+                show_help_and_exit_error
+            fi
+            k8s_namespace="$2"
             shift 2
             ;;
         --platform | -p)
@@ -193,6 +211,11 @@ if [ ${#images[@]} -lt 1 ]; then
     show_help_and_exit_error
 fi
 
+if [[ "${deep_delta}" == "true" && "${orchestrator}" == "$K8S_ORCHESTRATOR"  ]]; then
+    echo "deep deltas are currently not supported with $K8S_ORCHESTRATOR orchestrator." >&2
+    show_help_and_exit_error
+fi
+
 temp_dir="$(mktemp -d)"
 [[ "${temp_dir}" == "" ]] && {
     echo "cant get the temporary directory" >&2
@@ -212,7 +235,7 @@ get_image_sha() {
         echo none
         return 0
     }
-    if [[ "${orchestrator}" == "docker-compose" ]]; then
+    if [[ "${orchestrator}" == "${DOCKER_COMPOSE_ORCHESTRATOR}" ]]; then
         docker image inspect "${url}" --format='{{.ID}}' | cut -f2 -d: # let's hope we do not have to preserve the fact that it was sha256:
     else
         ctr image ls name=="${url}" | sed -n -e 's/.*sha256:\([a-zA-Z0-9]*\).*/\1/p' # let's hope we do not have to preserve the fact that it was sha256:
@@ -223,10 +246,10 @@ pull_image() {
     local -r url="$1"
 
     [[ "$url" == "" ]] && { return 0; }
-    if [[ "${orchestrator}" == "docker-compose" ]]; then
+    if [[ "${orchestrator}" == "${DOCKER_COMPOSE_ORCHESTRATOR}" ]]; then
         docker pull "$url" --platform "$platform"
     else
-        ctr image pull --platform "$platform"
+        ctr image pull "$url" --platform "$platform"
     fi
 }
 
@@ -235,7 +258,7 @@ export_image() {
     local -r output="$2"
 
     [[ "$image" == "" ]] && { return 0; }
-    if [[ "${orchestrator}" == "docker-compose" ]]; then
+    if [[ "${orchestrator}" == "${DOCKER_COMPOSE_ORCHESTRATOR}" ]]; then
         docker image save "$image" -o "${output}"
     else
         ctr image export "${output}" "$image" --platform "$platform"
@@ -440,7 +463,18 @@ generate_metadata() {
         [[ $((i + 1)) -lt ${#shas[@]} ]] && echo -ne "," >> "${output}"
     done
     echo -ne ']' >> "${output}"
+    if [[ "${k8s_ctr_address}" != "" || "${k8s_namespace}" != "" ]]; then
+        echo -ne ',"env":{' >> "${output}"
+        echo -ne "\"K8S_CTR_ADDRESS\":\"${k8s_ctr_address}\"," >> "${output}"
+        echo -ne "\"K8S_NAMESPACE\":\"${k8s_namespace}\"" >> "${output}"
+        echo -ne '}' >> "${output}"
+    fi
     echo -ne "}" >> "${output}"
+    echo "saving metadata:"
+    echo "--"
+    cat "${output}"
+    echo
+    echo "--"
 }
 
 prepare_images "${temp_dir}/images"

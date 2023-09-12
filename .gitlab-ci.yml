@@ -44,11 +44,12 @@ test:smoketests:
     when: always
 
 test:acceptancetests:
+  stage: test
   image: ubuntu:20.04
   services:
     - docker:dind
   before_script:
-    - apt update && apt install -yy bash wget xz-utils awscli docker.io curl make xdelta3 tree
+    - apt update && apt install -yy bash wget xz-utils awscli docker.io curl make xdelta3 tree containerd
     - docker ps
     - docker info
     - mkdir -p ~/.docker/cli-plugins/
@@ -57,6 +58,11 @@ test:acceptancetests:
     - ~/.docker/cli-plugins/docker-compose --help
     - cp ~/.docker/cli-plugins/docker-compose /usr/bin/
     - docker compose version
+    - echo "installing k3d"
+    - wget -q -O - https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
+    - curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
+    - chmod +x ./kubectl
+    - mv ./kubectl /usr/bin/kubectl
 
   script:
     - ./acceptance-tests/run.sh

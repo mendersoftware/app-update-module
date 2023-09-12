@@ -43,8 +43,8 @@ _discover_compose() {
     if test $rc -eq 0; then
         compose_version=$($_docker_compose_cmd version --short)
         case "$compose_version" in
-             "2."*) ;;
-             *)
+            "2."*)  ;;
+            *)
                 echo "Docker Compose v2 is required; installed version: ${compose_version}"
                 rc=1
                 ;;
