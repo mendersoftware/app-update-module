@@ -1,5 +1,7 @@
-MODULES_DIR = /usr/share/mender/modules/v3
-SUB_MODULES_DIR = /usr/share/mender/app-modules/v1
+DESTDIR ?=
+prefix ?= /usr
+MODULES_DIR = $(DESTDIR)$(prefix)/share/mender/modules/v3
+SUB_MODULES_DIR = $(DESTDIR)$(prefix)/share/mender/app-modules/v1
 MODULES = src/app
 SUB_MODULES = src/app-modules/docker-compose src/app-modules/k8s
 
