@@ -38,6 +38,7 @@ function test_phase_run() {
     local image1
     local image2
     local -r timeout_s=32
+    local log="mktemp -u --tmpdir=${temp_dir}"
 
     echo "entering run phase"
     image1=docker.io/library/alpine:3.14
@@ -52,10 +53,22 @@ function test_phase_run() {
         --orchestrator docker-compose \
         --manifests-dir acceptance-tests/data/manifests-1 \
         --application-name myapp0 || return 1
-    mender install "$artifact_file" || return 2
+    mender install "$artifact_file" | tee -a "$log"
+    [[ ${PIPESTATUS[0]} -eq 0 ]] || {
+        echo "install artifact failed"
+        return 2
+    }
     sleep "${timeout_s}"
     docker ps
     diff <(docker ps --format '{{.Image}}' | sort) <(echo -ne "$(basename ${image1})\n$(basename ${image2})\n" | sort) || return 3
+    grep -F Pulling /data/mender-app/myapp0/manifests/*.log && {
+        echo "up log contains evidence of image pulling"
+        return 4
+    }
+    grep -F Pulling "$log" && {
+        echo                         "install log contains evidence of image pulling"
+        return                                                                                5
+    }
     return 0
 }
 
