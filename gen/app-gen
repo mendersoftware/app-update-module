@@ -15,6 +15,7 @@
 
 set -e
 set -u
+# set -x
 
 APPLICATION_NAME_ALLOWED_REGEX="[^a-zA-Z0-9_-]"
 K8S_ORCHESTRATOR="k8s"
@@ -211,11 +212,6 @@ if [ ${#images[@]} -lt 1 ]; then
     show_help_and_exit_error
 fi
 
-if [[ "${deep_delta}" == "true" && "${orchestrator}" == "$K8S_ORCHESTRATOR"  ]]; then
-    echo "deep deltas are currently not supported with $K8S_ORCHESTRATOR orchestrator." >&2
-    show_help_and_exit_error
-fi
-
 temp_dir="$(mktemp -d)"
 [[ "${temp_dir}" == "" ]] && {
     echo "cant get the temporary directory" >&2
@@ -305,6 +301,126 @@ function parse_parent_child() {
         fi
     done
     set -e
+}
+
+oci_ensure_version() {
+  local -r major=$(jq -r .imageLayoutVersion < "$1" | cut -f1 -d.)
+
+  [[ $major -ge 1 ]]
+}
+
+# deep_delta_ctr_manifests "${current_manifests[${i}]}" "${new_manifests[${i}]}"
+deep_delta_ctr_manifests() {
+    local -r current="$1"
+    local -r new="$2"
+    local -a new_layers
+    local -a current_layers
+    local i
+
+    echo "deep_delta_ctr_manifests $@"
+    while read -r; do
+        current_layers+=("`dirname "$current"`/$REPLY")
+    done < <(jq -r .layers[].digest < "$current" | sed -e 's|^.*:||')
+    while read -r; do
+        new_layers+=("`dirname "$new"`/$REPLY")
+    done < <(jq -r .layers[].digest < "$new" | sed -e 's|^.*:||')
+
+    for((i=0;i<${#current_layers[@]};i++)); do
+        [[ $i -ge ${#new_layers[@]} ]] && break
+        if gzip -t "${current_layers[${i}]}" 2>/dev/null; then
+          mv -v "${current_layers[${i}]}" "${current_layers[${i}]}".gz && gzip -d "${current_layers[${i}]}".gz
+        fi
+        if gzip -t "${new_layers[${i}]}" 2>/dev/null; then
+          mv -v "${new_layers[${i}]}" "${new_layers[${i}]}".gz && gzip -d "${new_layers[${i}]}".gz
+        fi
+        echo "running delta_cmd ${current_layers[${i}]} ${new_layers[${i}]} ${new_layers[${i}]}.vcdiff"
+        $delta_cmd "${current_layers[${i}]}" "${new_layers[${i}]}" "${new_layers[${i}]}".vcdiff && {
+            rm -fv "${new_layers[${i}]}"
+            echo -ne "${current_layers[${i}]}" > "${new_layers[${i}]}".current
+            echo -ne "${new_layers[${i}]}" > "${new_layers[${i}]}".new
+        }
+    done
+    tree `dirname "$new"`
+    tree `dirname "$current"`
+    echo "done generating $current -- $new manifest deltas"
+}
+
+# deep_delta_ctr "${root_dir}" "${output_dir}/image-current.img" "${output_dir}/image-new.img" "${output_dir}/image.img"
+deep_delta_ctr() {
+    local -r root_dir="$1"
+    local -r current="$2"
+    local -r new="$3"
+    local -r output="$4"
+    local -r current_dir="${root_dir}/current-image"
+    local -r new_dir="${root_dir}/new-image"
+    local new_manifest
+    local current_manifest
+    local -A new_manifests
+    local -A current_manifests
+    local i
+    local j
+    local key
+    local f
+
+    mkdir -p "${current_dir}"
+    mkdir -p "${new_dir}"
+    echo "unpacking images"
+    tar xf "$current" -C "$current_dir" || {
+        echo "ERROR errors unpacking $current"
+        return 1
+    }
+    tar xf "$new" -C "$new_dir" || {
+        echo "ERROR errors unpacking $new"
+        return 1
+    }
+
+    # at this moment the current image is unpacked to current_dir
+    # at this moment the new image is unpacked to new_dir
+
+    # let's ensure that we have at least 1.0.0
+    oci_ensure_version "$current_dir/oci-layout" || return 2
+    oci_ensure_version "$new_dir/oci-layout" || return 2
+
+    current_manifest=blobs/$(jq -r '.manifests[0].digest' < "$current_dir/index.json" | sed -e 's|:|/|')
+    new_manifest=blobs/$(jq -r '.manifests[0].digest' < "$new_dir/index.json" | sed -e 's|:|/|')
+
+    # now in both current_manifest and new_manifest files there are "manifests" arrays which
+    # hold per-architecture manifests. we take each one of those, that exist in blobs
+    # and generate a deep delta for each new-current pair
+    echo "loading $current_dir/$current_manifest"
+    while read -r; do
+        f=$(echo "$REPLY" | cut -f1 -d.)
+        key=$(echo "$REPLY" | cut -f2,3 -d.)
+        echo "current manifests, trying $f $key"
+        [[ -f "${current_dir}/blobs/${f}" ]] && current_manifests[${key}]="${current_dir}/blobs/${f}"
+    done < <(jq -r '.manifests[] | "\(.digest).\(.platform.os).\(.platform.architecture)"' < "$current_dir/$current_manifest" | sed -e 's|:|/|')
+    echo "loading $new_dir/$new_manifest"
+    while read -r; do
+        f=$(echo "$REPLY" | cut -f1 -d.)
+        key=$(echo "$REPLY" | cut -f2,3 -d.)
+        echo "new manifests, trying $f $key"
+        [[ -f "${new_dir}/blobs/${f}" ]] && new_manifests[${key}]="${new_dir}/blobs/${f}"
+    done < <(jq -r '.manifests[] | "\(.digest).\(.platform.os).\(.platform.architecture)"' < "$new_dir/$new_manifest" | sed -e 's|:|/|')
+    declare -p current_manifests
+    declare -p new_manifests
+
+    # now new_manifests and current_manifests contain paths.os.arch to the existing manifests for all the
+    # platforms that the image contains. each element in new_manifests and current_manifests arrays
+    # contains an array of layers (called layers). this is the array that we traverse and create
+    # a binary delta of each layer (taking pairs in the order they apear in layers array)
+    # first doing gzip -d on each (mv to .gz and gzip -d) in order to be able to create
+    # xdelta3 on raw tars for maxium utilization of binary delta algorithms. we do not need
+    # any compression after `xdelta3 -e -s i1 i2 deltaout` is saved.
+    for i in ${!current_manifests[@]}; do
+      [[ "${new_manifests[${i}]}" == "" ]] && {
+          echo "unable to create a delta if new image does not contain the same platform as the current one (${i})"
+          return 3
+      }
+      deep_delta_ctr_manifests "${current_manifests[${i}]}" "${new_manifests[${i}]}"
+    done
+    rm -f "$output"
+    tar -cf "$output" -C "$new_dir" .
+    return 0
 }
 
 # deep_delta "${output_dir}/image-current.img" "${output_dir}/image-new.img" "${output_dir}/image.img"
@@ -430,7 +546,11 @@ prepare_images() {
                 exit 1
             fi
             if [[ ${deep_delta} == true ]]; then
-                deep_delta "${root_dir}" "${output_dir}/image-current.img" "${output_dir}/image-new.img" "${output_dir}/image.img"
+                if [[ "${orchestrator}" == "$K8S_ORCHESTRATOR" ]]; then
+                    deep_delta_ctr "${root_dir}" "${output_dir}/image-current.img" "${output_dir}/image-new.img" "${output_dir}/image.img"
+                else
+                    deep_delta "${root_dir}" "${output_dir}/image-current.img" "${output_dir}/image-new.img" "${output_dir}/image.img"
+                fi
                 touch "${output_dir}"/deep_delta
             else
                 $delta_cmd "${output_dir}/image-current.img" "${output_dir}/image-new.img" "${output_dir}/image.img"
