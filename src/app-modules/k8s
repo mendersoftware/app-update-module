@@ -23,6 +23,10 @@ kubectl_cmd=${KUBECTL_COMMAND:-"kubectl"}
 ctr_cmd=${CTR_COMMAND:-"ctr"}
 ctr_image_flags="-n=k8s.io"
 
+delta_executable=${XDELTA_COMMAND:-"xdelta3"}
+delta_arguments=${XDELTA_ARGS:-"-d -s"}
+delta_cmd="${delta_executable} ${delta_arguments}"
+
 if test "${K8S_NAMESPACE}" != ""; then
     namespace_argument="--namespace=${K8S_NAMESPACE}"
 fi
@@ -37,6 +41,66 @@ if test "${MENDER_APP_UPDATE_MODULE_PLATFORM}" != ""; then
     platform_argument="--platform ${MENDER_APP_UPDATE_MODULE_PLATFORM}"
 fi
 
+# image.img
+#    |-- blobs
+#    |   `-- sha256
+#    |       |-- 1e72ff2f71d79570502c6a6e3b97d4a448e6877e456d571842ca3797da5e9f08.current
+#    |       |-- 1e72ff2f71d79570502c6a6e3b97d4a448e6877e456d571842ca3797da5e9f08.new
+#    |       |-- 1e72ff2f71d79570502c6a6e3b97d4a448e6877e456d571842ca3797da5e9f08.vcdiff
+apply_blob_delta() {
+    local current_image_dir="$1"
+    local new_image_dir="$2"
+    local vcdiff="$3"
+    local blob_name
+
+    blob_name=$(echo "$vcdiff" | cut -f1 -d.)
+    $delta_cmd "$current_image_dir"/blobs/sha256/$(cat "$new_image_dir"/blobs/sha256/"${blob_name}".current) "${vcdiff}" "$new_image_dir"/blobs/sha256/"${blob_name}"
+    rm -f "$new_image_dir"/blobs/sha256/"${blob_name}".current
+    rm -f "$new_image_dir"/blobs/sha256/"${blob_name}".new
+    rm -f "$new_image_dir"/blobs/sha256/"${blob_name}".vcdiff
+}
+
+resolve_deep_delta() {
+    local application_name="$1"
+    local input_file="$2"
+    local current_url="$3"
+    local new_image_dir="${MODULE_TMPDIR:-${TMPDIR}}"
+    local current_image_dir="${MODULE_TMPDIR:-${TMPDIR}}"
+    local current_image_file
+    local vcdiff
+    local image_dir="${MODULE_TMPDIR:-${TMPDIR}}"
+
+    if test ! -d "$new_image_dir"; then
+        echo "ERROR: neither MODULE_TMPDIR or TMPDIR is set"
+        return 1
+    fi
+    if test ! -d "$current_image_dir"; then
+        echo "ERROR: neither MODULE_TMPDIR or TMPDIR is set"
+        return 1
+    fi
+    if test ! -d "$image_dir"; then
+        echo "ERROR: neither MODULE_TMPDIR or TMPDIR is set"
+        return 1
+    fi
+    current_image_file="${image_dir}"/$(echo "${current_url}" | sha256sum | cut -f1 -d' ')
+    if test -f "$current_image_file"; then
+        rm -f "${current_image_file}"
+    fi
+    app_save "${application_name}" "$current_url" "${current_image_file}"
+    new_image_dir="${image_dir}/image-$(sha256sum "${input_file}" | cut -f1 -d' ')"
+    current_image_dir="${image_dir}/image-$(sha256sum "${current_image_file}" | cut -f1 -d' ')"
+    unpack_image "${input_file}" "${new_image_dir}"
+    unpack_image "${current_image_file}" "${current_image_dir}"
+    for vcdiff in "${new_image_dir}"/blobs/sha256/*.vcdiff; do
+        if test ! -f "$vcdiff"; then
+            break
+        fi
+        apply_blob_delta "${current_image_dir}" "${new_image_dir}" "${vcdiff}"
+    done
+    rm -f "${input_file}"
+    tar cf "${input_file}" -C "${new_image_dir}" .
+}
+
 app_load() {
     local application_name="$1"
     local url="$2"
@@ -44,8 +108,15 @@ app_load() {
     local url_current="$4"
 
     if test "$OPTIONS" = "deep_delta"; then
-        echo "deep deltas are not supported with containerd based images at in this version" 1>&2
-        return 1
+        if test "$MODULE_TMPDIR" = ""; then
+            echo "ERROR: ${MODULE_TMPDIR} cant be empty"
+            return 1
+        fi
+        if ! test -d "$MODULE_TMPDIR"; then
+            echo "ERROR: ${MODULE_TMPDIR} does not exist as a directory"
+            return 1
+        fi
+        resolve_deep_delta "${application_name}" "${input_file}" "${url_current}"
     fi
 
     $ctr_cmd $ctr_image_flags $address_argument image import "$input_file" $platform_argument 1>&2
