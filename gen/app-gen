@@ -336,8 +336,8 @@ deep_delta_ctr_manifests() {
         echo "running delta_cmd ${current_layers[${i}]} ${new_layers[${i}]} ${new_layers[${i}]}.vcdiff"
         $delta_cmd "${current_layers[${i}]}" "${new_layers[${i}]}" "${new_layers[${i}]}".vcdiff && {
             rm -fv "${new_layers[${i}]}"
-            echo -ne "${current_layers[${i}]}" > "${new_layers[${i}]}".current
-            echo -ne "${new_layers[${i}]}" > "${new_layers[${i}]}".new
+            echo -ne "${current_layers[${i}]}" | sed -e 's|^.*/blobs/||' > "${new_layers[${i}]}".current
+            echo -ne "${new_layers[${i}]}" | sed -e 's|^.*/blobs/||' > "${new_layers[${i}]}".new
         }
     done
     tree `dirname "$new"`
