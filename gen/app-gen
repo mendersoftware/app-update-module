@@ -420,6 +420,7 @@ deep_delta_ctr() {
     done
     rm -f "$output"
     tar -cf "$output" -C "$new_dir" .
+    rm -Rf "$current_dir" "$new_dir"
     return 0
 }
 
