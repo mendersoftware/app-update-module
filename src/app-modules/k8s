@@ -53,9 +53,15 @@ apply_blob_delta() {
     local new_image_dir="$2"
     local vcdiff="$3"
     local blob_name
+    local current
 
     blob_name=$(basename "$vcdiff" | sed -e 's/\.vcdiff$//')
-    $delta_cmd "$current_image_dir"/blobs/$(cat "$new_image_dir"/blobs/sha256/"${blob_name}".current) "${vcdiff}" "$new_image_dir"/blobs/sha256/"${blob_name}" || { echo "apply_blob_delta bp0"; sleep 65536; }
+    current="$current_image_dir"/blobs/$(cat "$new_image_dir"/blobs/sha256/"${blob_name}".current)
+    mv -f "$current" "$current".gz
+    gzip -d "$current".gz
+    $delta_cmd "$current" "${vcdiff}" "$new_image_dir"/blobs/sha256/"${blob_name}" || { echo "apply_blob_delta bp0"; sleep 65536; }
+    gzip "$new_image_dir"/blobs/sha256/"${blob_name}"
+    mv -f "$new_image_dir"/blobs/sha256/"${blob_name}".gz "$new_image_dir"/blobs/sha256/"${blob_name}"
     rm -f "$new_image_dir"/blobs/sha256/"${blob_name}".current
     rm -f "$new_image_dir"/blobs/sha256/"${blob_name}".new
     rm -f "$new_image_dir"/blobs/sha256/"${blob_name}".vcdiff
