@@ -48,16 +48,28 @@ fi
 #    |       |-- 1e72ff2f71d79570502c6a6e3b97d4a448e6877e456d571842ca3797da5e9f08.new
 #    |       |-- 1e72ff2f71d79570502c6a6e3b97d4a448e6877e456d571842ca3797da5e9f08.vcdiff
 apply_blob_delta() {
+    set -x
     local current_image_dir="$1"
     local new_image_dir="$2"
     local vcdiff="$3"
     local blob_name
 
-    blob_name=$(echo "$vcdiff" | cut -f1 -d.)
-    $delta_cmd "$current_image_dir"/blobs/sha256/$(cat "$new_image_dir"/blobs/sha256/"${blob_name}".current) "${vcdiff}" "$new_image_dir"/blobs/sha256/"${blob_name}"
+    blob_name=$(basename "$vcdiff" | sed -e 's/\.vcdiff$//')
+    $delta_cmd "$current_image_dir"/blobs/$(cat "$new_image_dir"/blobs/sha256/"${blob_name}".current) "${vcdiff}" "$new_image_dir"/blobs/sha256/"${blob_name}" || { echo "apply_blob_delta bp0"; sleep 65536; }
     rm -f "$new_image_dir"/blobs/sha256/"${blob_name}".current
     rm -f "$new_image_dir"/blobs/sha256/"${blob_name}".new
     rm -f "$new_image_dir"/blobs/sha256/"${blob_name}".vcdiff
+}
+
+unpack_image() {
+    local input_file="$1"
+    local image_dir="$2"
+
+    if test -d "${image_dir}"; then
+        rm -Rf "${image_dir}"
+    fi
+    mkdir -p "${image_dir}"
+    tar xvf "$input_file" -C "${image_dir}"
 }
 
 resolve_deep_delta() {
@@ -86,9 +98,11 @@ resolve_deep_delta() {
     if test -f "$current_image_file"; then
         rm -f "${current_image_file}"
     fi
+    set -x
     app_save "${application_name}" "$current_url" "${current_image_file}"
     new_image_dir="${image_dir}/image-$(sha256sum "${input_file}" | cut -f1 -d' ')"
     current_image_dir="${image_dir}/image-$(sha256sum "${current_image_file}" | cut -f1 -d' ')"
+    set -x
     unpack_image "${input_file}" "${new_image_dir}"
     unpack_image "${current_image_file}" "${current_image_dir}"
     for vcdiff in "${new_image_dir}"/blobs/sha256/*.vcdiff; do
@@ -127,7 +141,9 @@ app_save() {
     local url="$2"
     local output_file="$3"
 
-    $ctr_cmd $ctr_image_flags $address_argument image export $platform_argument "$output_file" "$url" 1>&2
+    set -x
+    $ctr_cmd $address_argument image export $platform_argument "$output_file" "$url" 1>&2
+    set +x
 }
 
 create_ns_if_needed() {
