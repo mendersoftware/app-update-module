@@ -87,6 +87,10 @@ resolve_deep_delta() {
     local current_image_file
     local vcdiff
     local image_dir="${MODULE_TMPDIR:-${TMPDIR}}"
+    local new_sum
+    local old_sum
+    local index_sum
+    local new_index_sum
 
     if test ! -d "$new_image_dir"; then
         echo "ERROR: neither MODULE_TMPDIR or TMPDIR is set"
@@ -118,7 +122,26 @@ resolve_deep_delta() {
         apply_blob_delta "${current_image_dir}" "${new_image_dir}" "${vcdiff}"
     done
     rm -f "${input_file}"
+    index_sum=`jq -r '.manifests[].digest' < "$new_image_dir"/index.json | cut -f2 -d:`
+    set -x
+    find "$new_image_dir" -type f -and -path '*/blobs/sha256/*' -and -not -name '*.back.2del' | while read -r; do
+     old_sum=`basename "$REPLY"`
+     new_sum=`sha256sum "$REPLY" | sed -e 's/ .*//'`
+     find "$new_image_dir" -type f -and -not -name '*.back.2del' -and -exec sed -i.back.2del -e "s/${old_sum}/${new_sum}/g" {} \;
+    done
+
+    new_index_sum=`sha256sum "$new_image_dir"/blobs/sha256/${index_sum} | sed -e 's/ .*//'`
+    mkdir -p "$new_image_dir"/blobs-fixed/sha256
+    find "$new_image_dir" -type f -and -path '*/blobs/sha256*' -and -not -name '*.back.2del' | while read -r; do
+     new_sum=`sha256sum "$REPLY" | sed -e 's/ .*//'`
+     mv -v "$REPLY" "`dirname ${REPLY/blobs/blobs-fixed}`/${new_sum}"
+    done
+    sed -i.back.2del -e "s/${index_sum}/${new_index_sum}/g" "$new_image_dir"/index.json
+    find "$new_image_dir" -name '*.back.2del' -and -exec rm -f {} \;
+    rm -Rf "$new_image_dir"/blobs
+    mv -v "$new_image_dir"/blobs-fixed "$new_image_dir"/blobs
     tar cf "${input_file}" -C "${new_image_dir}" .
+    set +x
 }
 
 app_load() {
@@ -148,7 +171,7 @@ app_save() {
     local output_file="$3"
 
     set -x
-    $ctr_cmd $address_argument image export $platform_argument "$output_file" "$url" 1>&2
+    $ctr_cmd $address_argument $ctr_image_flags image export $platform_argument "$output_file" "$url" 1>&2
     set +x
 }
 
