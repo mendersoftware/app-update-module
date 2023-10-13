@@ -278,7 +278,11 @@ case "$1" in
         true
         ;;
     ROLLBACK)
-        true
+        shift
+        # $app_sub_module ROLLBACK "${application_name}" "${PERSISTENT_STORE}/${application_name}-${rollback_id}" "${PERSISTENT_STORE}/${application_name}/manifests" # TODO: implement
+        app_stop "$1" "$3" || exit $?
+        # $app_sub_module ROLLOUT "${application_name}" "${PERSISTENT_STORE}/${application_name}/manifests"
+        app_rollout "$1" "$3"
         ;;
     PURGE)
         true

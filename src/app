@@ -125,6 +125,14 @@ parse_metadata() {
     $(jq -r 'select(.env != null) | .env | keys[] as $k | "export \($k)=\(.[$k])"' < "$1" 2> /dev/null)
 }
 
+cleanup() {
+    local app_dir="$1"
+
+    if test -f "$app_dir"/images/urls; then
+      xargs -I{} $app_sub_module DELETE {} < "$app_dir"/images/urls # TODO: implement in k8s and docker-compose
+    fi
+}
+
 handle_artifact() {
     local image_dir
     local image
@@ -180,6 +188,8 @@ handle_artifact() {
             fi
         fi
     done
+    mkdir -p "${PERSISTENT_STORE}/${application_name}"/images
+    rm -f "${PERSISTENT_STORE}/${application_name}"/images/*
     for image_dir in "${temp_dir}/images/"*; do
         url_current=$(cat "${image_dir}/url-current.txt")
         url_new=$(cat "${image_dir}/url-new.txt")
@@ -190,19 +200,27 @@ handle_artifact() {
         fi
         MODULE_TMPDIR="${temp_dir}" OPTIONS="${deep_delta}" $app_sub_module LOAD "${application_name}" "${url_new}" "${image_dir}/image.img" "${url_current}"
         # and the sub module deals with proper image loading
+        # we save the image urls and shasums in order to be able to clean up
+        echo "${url_new}" >> "${PERSISTENT_STORE}/${application_name}"/images/urls
+        echo "${sha_new}" >> "${PERSISTENT_STORE}/${application_name}"/images/shas
     done
     # we should check if the app is healthy and alive, then decide what to do
     # at the moment we assume it is alive and ok
-    if test -d "${PERSISTENT_STORE}/${application_name}-${rollback_id}"; then
-        rm -Rf "${PERSISTENT_STORE}/${application_name}-${rollback_id}"
-    fi
     if test -d "${PERSISTENT_STORE}/${application_name}/"; then
         mv -v "${PERSISTENT_STORE}/${application_name}/" "${PERSISTENT_STORE}/${application_name}-${rollback_id}"
         $app_sub_module STOP "${application_name}" "${PERSISTENT_STORE}/${application_name}-${rollback_id}/manifests"
     fi
-    mkdir -p "${PERSISTENT_STORE}/${application_name}"
     mv -v "$temp_dir/manifests" "${PERSISTENT_STORE}/${application_name}/"
     $app_sub_module ROLLOUT "${application_name}" "${PERSISTENT_STORE}/${application_name}/manifests"
+    if test $? -eq 0; then
+      clean_up "${PERSISTENT_STORE}/${application_name}-${rollback_id}" # clean up call automatically removes the images in by reference taken from clen-up subdirectory, it relies on the fact that we save them there
+      # save_rollback "${PERSISTENT_STORE}/${application_name}-${rollback_id}" # saves the current images ids and manifests as new rollback state. this can be just cp -a "${PERSISTENT_STORE}/${application_name} "${PERSISTENT_STORE}/${application_name}-${rollback_id}"
+      rm -Rf "${PERSISTENT_STORE}/${application_name}-${rollback_id}"
+      cp -a "${PERSISTENT_STORE}/${application_name}" "${PERSISTENT_STORE}/${application_name}-${rollback_id}"
+    else
+      clean_up "${PERSISTENT_STORE}/${application_name}"
+      $app_sub_module ROLLBACK "${application_name}" "${PERSISTENT_STORE}/${application_name}-${rollback_id}" "${PERSISTENT_STORE}/${application_name}/manifests" # TODO: implement
+    fi
     # now if $app_sub_module healthy then rm -Rf "${PERSISTENT_STORE}/${artifact_name}-${rollback_id}"
     # and on rollback we just deploy "${PERSISTENT_STORE}/${artifact_name}-${rollback_id}"
     # earlier ln -s "${PERSISTENT_STORE}/${artifact_name}-${rollback_id}" "${PERSISTENT_STORE}/${artifact_name}-rollback"
