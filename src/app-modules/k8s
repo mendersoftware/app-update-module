@@ -254,7 +254,7 @@ case "$1" in
         true
         ;;
     DELETE)
-        true
+        ctr_cmd $ctr_image_flags $address_argument image "$1"
         ;;
     ROLLBACK)
         shift

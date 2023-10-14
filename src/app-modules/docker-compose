@@ -275,7 +275,7 @@ case "$1" in
         true
         ;;
     DELETE)
-        true
+        $docker_cmd image rm "$1"
         ;;
     ROLLBACK)
         shift
