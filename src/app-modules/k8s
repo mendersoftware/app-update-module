@@ -255,7 +255,8 @@ case "$1" in
         ;;
     DELETE)
         shift
-        ctr_cmd $ctr_image_flags $address_argument image "$1"
+        echo "k8s:running:$ctr_cmd $ctr_image_flags $address_argument image rm $1"
+        $ctr_cmd $ctr_image_flags $address_argument image rm "$1"
         ;;
     ROLLBACK)
         shift
