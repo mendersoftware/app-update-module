@@ -230,14 +230,18 @@ handle_artifact() {
     if test $? -eq 0; then
       echo "successful rollout"
       if test -d "${PERSISTENT_STORE}/${application_name}-${rollback_id}"; then
+        echo "cleaning up -${rollback_id}"
         clean_up "${PERSISTENT_STORE}/${application_name}-${rollback_id}" # clean up call automatically removes the images in by reference taken from clen-up subdirectory, it relies on the fact that we save them there
+        echo "cleaning up -previous"
         clean_up "${PERSISTENT_STORE}/${application_name}-previous" # clean up the composition that was running just now
       else
         echo "successful rollout: nothing to clean"
       fi
       # save_rollback "${PERSISTENT_STORE}/${application_name}-${rollback_id}" # saves the current images ids and manifests as new rollback state. this can be just cp -a "${PERSISTENT_STORE}/${application_name} "${PERSISTENT_STORE}/${application_name}-${rollback_id}"
-      rm -Rf "${PERSISTENT_STORE}/${application_name}-${rollback_id}"
-      cp -a "${PERSISTENT_STORE}/${application_name}" "${PERSISTENT_STORE}/${application_name}-${rollback_id}"
+      echo "saving data for rollback"
+      rm -Rfv "${PERSISTENT_STORE}/${application_name}-${rollback_id}"
+      cp -va "${PERSISTENT_STORE}/${application_name}" "${PERSISTENT_STORE}/${application_name}-${rollback_id}"
+      echo "successfully saved rollback data"
     else
       echo "unsuccessful rollout"
       clean_up "${PERSISTENT_STORE}/${application_name}"
