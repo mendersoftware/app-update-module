@@ -125,7 +125,7 @@ parse_metadata() {
     $(jq -r 'select(.env != null) | .env | keys[] as $k | "export \($k)=\(.[$k])"' < "$1" 2> /dev/null)
 }
 
-cleanup() {
+clean_up() {
     local app_dir="$1"
 
     if test -f "$app_dir"/images/urls; then
@@ -150,10 +150,14 @@ handle_artifact() {
         return 1
     fi
 
+    echo "decompressing images"
     $tar_decompress_cmd "$1"/images.tar.gz -C "$temp_dir"
+    echo "decompressing manifests"
     $tar_decompress_cmd "$1"/manifests.tar.gz -C "$temp_dir"
 
+    echo "unpacking images"
     for image_dir in "${temp_dir}/images/"*; do
+        echo "unpacking $image_dir"
         url_new=$(cat "${image_dir}/url-new.txt")
         url_current=$(cat "${image_dir}/url-current.txt")
         sha_new=$(cat "${image_dir}/sums-new.txt")
@@ -189,8 +193,11 @@ handle_artifact() {
         fi
     done
     if test -d "${PERSISTENT_STORE}/${application_name}"; then
+      echo "copying existing composition to -previous"
       rm -Rf "${PERSISTENT_STORE}/${application_name}-previous"
       mv -v "${PERSISTENT_STORE}/${application_name}" "${PERSISTENT_STORE}/${application_name}-previous"
+    else
+      echo "no previous composition found"
     fi
     mkdir -pv "${PERSISTENT_STORE}/${application_name}"/images
     rm -vf "${PERSISTENT_STORE}/${application_name}"/images/*
@@ -214,8 +221,11 @@ handle_artifact() {
     if test -d "${PERSISTENT_STORE}/${application_name}-previous"; then
         echo "stopping ${PERSISTENT_STORE}/${application_name}-previous/manifests"
         $app_sub_module STOP "${application_name}" "${PERSISTENT_STORE}/${application_name}-previous/manifests"
+    else
+        echo "-previous composition not present; nothing to stop."
     fi
     mv -v "$temp_dir/manifests" "${PERSISTENT_STORE}/${application_name}/"
+    echo "rolling out ${PERSISTENT_STORE}/${application_name}/manifests"
     $app_sub_module ROLLOUT "${application_name}" "${PERSISTENT_STORE}/${application_name}/manifests"
     if test $? -eq 0; then
       echo "successful rollout"
