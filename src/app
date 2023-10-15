@@ -237,6 +237,7 @@ handle_artifact() {
       else
         echo "successful rollout: nothing to clean"
       fi
+      rm -Rfv "${PERSISTENT_STORE}/${application_name}-previous"
       # save_rollback "${PERSISTENT_STORE}/${application_name}-${rollback_id}" # saves the current images ids and manifests as new rollback state. this can be just cp -a "${PERSISTENT_STORE}/${application_name} "${PERSISTENT_STORE}/${application_name}-${rollback_id}"
       echo "saving data for rollback"
       rm -Rfv "${PERSISTENT_STORE}/${application_name}-${rollback_id}"
