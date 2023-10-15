@@ -208,7 +208,7 @@ app_stop() {
     local application_name="$1"
     local manifests_dir="$2"
 
-    $kubectl_cmd delete -Rf "${manifests_dir}" "$namespace_argument" 1>&2 || true
+    $kubectl_cmd delete -Rf "${manifests_dir}" $namespace_argument 2>&1 || true
 }
 
 app_requirements() {
