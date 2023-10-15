@@ -226,6 +226,7 @@ handle_artifact() {
     fi
     mv -v "$temp_dir/manifests" "${PERSISTENT_STORE}/${application_name}/"
     echo "rolling out ${PERSISTENT_STORE}/${application_name}/manifests"
+    set +e
     $app_sub_module ROLLOUT "${application_name}" "${PERSISTENT_STORE}/${application_name}/manifests"
     if test $? -eq 0; then
       echo "successful rollout"
@@ -259,6 +260,7 @@ handle_artifact() {
         fi
       fi
     fi
+    set -e
     # now if $app_sub_module healthy then rm -Rf "${PERSISTENT_STORE}/${artifact_name}-${rollback_id}"
     # and on rollback we just deploy "${PERSISTENT_STORE}/${artifact_name}-${rollback_id}"
     # earlier ln -s "${PERSISTENT_STORE}/${artifact_name}-${rollback_id}" "${PERSISTENT_STORE}/${artifact_name}-rollback"
