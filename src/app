@@ -144,6 +144,7 @@ handle_artifact() {
     local image_new
     local deep_delta
     local rollback_id="last"
+    local rc=0
 
     if test ! -d "$temp_dir"; then
         echo "ERROR: temp_dir does not exist"
@@ -248,21 +249,26 @@ handle_artifact() {
       echo "successfully saved rollback data"
     else
       echo "unsuccessful rollout"
+      rc=8
       clean_up "${PERSISTENT_STORE}/${application_name}"
       $app_sub_module ROLLBACK "${application_name}" "${PERSISTENT_STORE}/${application_name}-${rollback_id}" "${PERSISTENT_STORE}/${application_name}/manifests" # TODO: implement
       if test $? -eq 0; then
         echo "successful rollback"
+        rc=80
       else
         echo "unsuccessful rollback trying to rollout the composition we saw when we started"
         $app_sub_module ROLLOUT "${application_name}" "${PERSISTENT_STORE}/${application_name}-previous/manifests"
         if test $? -eq 0; then
           echo "successfully rolled out ${PERSISTENT_STORE}/${application_name}-previous"
+          rc=82
         else
           echo "rollout of ${PERSISTENT_STORE}/${application_name}-previous was unsuccessful; deployment failed; rollout attempts failed."
+          rc=84
         fi
       fi
     fi
     set -e
+    return $rc
     # now if $app_sub_module healthy then rm -Rf "${PERSISTENT_STORE}/${artifact_name}-${rollback_id}"
     # and on rollback we just deploy "${PERSISTENT_STORE}/${artifact_name}-${rollback_id}"
     # earlier ln -s "${PERSISTENT_STORE}/${artifact_name}-${rollback_id}" "${PERSISTENT_STORE}/${artifact_name}-rollback"
