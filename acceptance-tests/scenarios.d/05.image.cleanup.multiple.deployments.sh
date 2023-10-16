@@ -38,7 +38,7 @@ function test_phase_run_clean_up() {
     local image1
     local image2
     local -r timeout_s=32
-    local log="mktemp -u --tmpdir=${temp_dir}"
+    local log=$(mktemp -u --tmpdir=${temp_dir})
     local i
 
     echo "clean_up: entering run phase"
@@ -46,6 +46,9 @@ function test_phase_run_clean_up() {
       artifact_name=$(basename "$temp_dir")-${i}
       image1=docker.io/library/alpine:3.${i}
       image2=docker.io/library/memcached:1.6.18-alpine
+      echo "clean_up: generating with ${image1} and ${image2}"
+      docker ps
+      rm -f "${artifact_file}"
       "${GENERATOR:-./gen/app-gen}" \
           --artifact-name "${artifact_name}" \
           --device-type "$(cat /var/lib/mender/device_type | sed -e 's/^.*=//')" \
@@ -54,14 +57,15 @@ function test_phase_run_clean_up() {
           --image "${image2}" \
           --platform linux/amd64 \
           --orchestrator docker-compose \
-          --manifests-dir acceptance-tests/data/manifests-1 \
-          --application-name myapp0 || return 1
+          --manifests-dir acceptance-tests/data/manifests-1-${i} \
+          --application-name myapp0c || return 1
       mender install "$artifact_file" | tee -a "$log"
       [[ ${PIPESTATUS[0]} -eq 0 ]] || {
           echo "install artifact failed"
           return 2
       }
       sleep "${timeout_s}"
+      echo "clean_up: after deployment:"
       docker ps
       diff <(docker ps --format '{{.Image}}' | sort) <(echo -ne "$(basename ${image1})\n$(basename ${image2})\n" | sort) || return 3
       grep -F Pulling /data/mender-app/myapp0/manifests/*.log && {
