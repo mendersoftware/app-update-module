@@ -34,7 +34,7 @@ function test_phase_setup_clean_up() {
 function test_phase_run_clean_up() {
     local -r temp_dir=$(mktemp -d)
     local -r artifact_file="${temp_dir}/a0.mender"
-    local -r artifact_name=$(basename "$temp_dir")
+    local artifact_name
     local image1
     local image2
     local -r timeout_s=32
@@ -43,6 +43,7 @@ function test_phase_run_clean_up() {
 
     echo "clean_up: entering run phase"
     for((i=14;i<=16;i++)); do
+      artifact_name=$(basename "$temp_dir")-${i}
       image1=docker.io/library/alpine:3.${i}
       image2=docker.io/library/memcached:1.6.18-alpine
       "${GENERATOR:-./gen/app-gen}" \
