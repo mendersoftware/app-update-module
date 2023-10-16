@@ -275,6 +275,8 @@ case "$1" in
         true
         ;;
     DELETE)
+        shift
+        echo "docker-compose:running:$docker_cmd image rm $1"
         $docker_cmd image rm "$1"
         ;;
     ROLLBACK)
