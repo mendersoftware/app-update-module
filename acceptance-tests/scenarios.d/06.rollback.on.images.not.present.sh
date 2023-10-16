@@ -13,8 +13,8 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-function test_phase_setup_images_not_present() {
-    echo "entering setup phase"
+function test_phase_setup_rollback_on_images_not_present() {
+    echo "rollback: entering setup phase"
     curl -fLsS https://get.mender.io -o get-mender.sh
     bash get-mender.sh || return 1
     make install || return 1
@@ -31,7 +31,7 @@ function test_phase_setup_images_not_present() {
     return 0
 }
 
-function test_phase_run_images_not_present() {
+function test_phase_run_rollback_on_images_not_present() {
     local -r temp_dir=$(mktemp -d)
     local -r artifact_file="${temp_dir}/a0.mender"
     local -r artifact_name=$(basename "$temp_dir")
@@ -39,7 +39,7 @@ function test_phase_run_images_not_present() {
     local image2
     local -r timeout_s=32
 
-    echo "entering run phase"
+    echo "rollback: entering run phase"
     image1=docker.io/library/alpine:3.14
     image2=docker.io/library/memcached:1.6.18-alpine
     "${GENERATOR:-./gen/app-gen}" \
@@ -50,21 +50,37 @@ function test_phase_run_images_not_present() {
         --image "${image2}" \
         --platform linux/amd64 \
         --orchestrator docker-compose \
+        --manifests-dir acceptance-tests/data/manifests-1 \
+        --application-name myapp0b
+    mender install "$artifact_file" || return 20
+    sleep $timeout_s
+    docker ps --format '{{.Image}}' > "${temp_dir}/before-rollback-$$"
+    rm -fv "$artifact_file"
+    "${GENERATOR:-./gen/app-gen}" \
+        --artifact-name "${artifact_name}" \
+        --device-type "$(cat /var/lib/mender/device_type | sed -e 's/^.*=//')" \
+        --output-path "${artifact_file}" \
+        --image "${image1}" \
+        --image "${image2}" \
+        --platform linux/amd64 \
+        --orchestrator docker-compose \
         --manifests-dir acceptance-tests/data/manifests-1-broken \
-        --application-name myapp0a || return 1
+        --application-name myapp0b || return 1
     echo "images_not_present: checking install rc"
     mender install "$artifact_file" && return 2 # we expect a failure
+    sleep $timeout_s
     echo "images_not_present: checking for running containers"
-    docker ps -q | grep -q . && return 3 # and we expect nothing to be running
+    docker ps
+    diff "${temp_dir}/before-rollback-$$" <(docker ps --format '{{.Image}}')
     return 0
 }
 
-function test_failed_hook_phase_run_images_not_present() {
-    echo "test run failed."
+function test_failed_hook_phase_run_rollback_on_images_not_present() {
+    echo "rollback: test run failed."
     exit 1
 }
 
-function test_failed_hook_phase_setup_images_not_present() {
-    echo "tests setup failed."
+function test_failed_hook_phase_setup_rollback_on_images_not_present() {
+    echo "rollback: tests setup failed."
     exit 1
 }
