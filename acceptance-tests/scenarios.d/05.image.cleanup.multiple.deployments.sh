@@ -78,6 +78,7 @@ function test_phase_run_clean_up() {
       }
     done
     docker image ls --format '{{.Repository}}:{{.Tag}}' | grep alpine
+    diff <(docker image ls --format '{{.Repository}}:{{.Tag}}' | grep alpine) <(echo "alpine:3.16") || return 4
     return 0
 }
 
