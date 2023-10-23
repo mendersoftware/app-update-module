@@ -56,7 +56,7 @@ app_save() {
     local url="$2"
     local output_file="$3"
 
-    $ctr_cmd $ctr_image_flags $address_argument image export $platform_argument "$output_file" "$url" 1>&2
+    $ctr_cmd $address_argument $ctr_image_flags image export $platform_argument "$output_file" "$url" 1>&2
 }
 
 create_ns_if_needed() {
@@ -92,7 +92,7 @@ app_stop() {
     local application_name="$1"
     local manifests_dir="$2"
 
-    $kubectl_cmd delete -Rf "${manifests_dir}" "$namespace_argument" 1>&2 || true
+    $kubectl_cmd delete -Rf "${manifests_dir}" $namespace_argument 2>&1 || true
 }
 
 app_requirements() {
@@ -138,10 +138,14 @@ case "$1" in
         true
         ;;
     DELETE)
-        true
+        shift
+        echo "k8s:running:$ctr_cmd $ctr_image_flags $address_argument image rm $1"
+        $ctr_cmd $ctr_image_flags $address_argument image rm "$1"
         ;;
     ROLLBACK)
-        true
+        shift
+        app_stop "$1" "$3" || exit $?
+        app_rollout "$1" "$3"
         ;;
     PURGE)
         true

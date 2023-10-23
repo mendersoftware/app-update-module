@@ -275,10 +275,14 @@ case "$1" in
         true
         ;;
     DELETE)
-        true
+        shift
+        echo "docker-compose:running:$docker_cmd image rm $1"
+        $docker_cmd image rm "$1"
         ;;
     ROLLBACK)
-        true
+        shift
+        app_stop "$1" "$3" || exit $?
+        app_rollout "$1" "$3"
         ;;
     PURGE)
         true
