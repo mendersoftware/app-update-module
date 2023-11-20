@@ -71,6 +71,8 @@ output_path="app-artifact.mender"
 passthrough_args=""
 version="1.0"
 orchestrator=""
+k8s_ctr_address=""
+k8s_namespace=""
 platform=""
 manifests_dir=""
 declare -a images
