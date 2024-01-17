@@ -54,7 +54,7 @@ function test_phase_run_docker_compose_cmd_not_present() {
         --manifests-dir acceptance-tests/data/manifests-1 \
         --application-name myapp0 || return 1
     echo "checking install rc"
-    mender install "$artifact_file" && return 2 # we expect a failure
+    mender-update install "$artifact_file" && return 2 # we expect a failure
     echo "checking for running containers"
     docker ps -q | grep -q . && return 3 # and we expect nothing to be running
     return 0

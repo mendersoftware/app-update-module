@@ -43,7 +43,7 @@ function test_phase_run_k8s_basic() {
     mv -f /var/lib/mender/device_type /var/lib/mender/device_type-prev
     echo "device_type=dev0" > /var/lib/mender/device_type
     kubectl get pods --namespace acceptance-tests
-    mender install "$artifact_file" || return 2
+    mender-update install "$artifact_file" || return 2
     sleep "${timeout_s}"
     kubectl get pods --namespace acceptance-tests | grep -q ^postgres-deployment-
     [[ $? -eq 0 ]] || return 4

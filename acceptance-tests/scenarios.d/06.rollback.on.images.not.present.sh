@@ -52,7 +52,7 @@ function test_phase_run_rollback_on_images_not_present() {
         --orchestrator docker-compose \
         --manifests-dir acceptance-tests/data/manifests-1 \
         --application-name myapp0b
-    mender install "$artifact_file" || return 20
+    mender-update install "$artifact_file" || return 20
     sleep $timeout_s
     docker ps --format '{{.Image}}' > "${temp_dir}/before-rollback-$$"
     rm -fv "$artifact_file"
@@ -67,7 +67,7 @@ function test_phase_run_rollback_on_images_not_present() {
         --manifests-dir acceptance-tests/data/manifests-1-broken \
         --application-name myapp0b || return 1
     echo "images_not_present: checking install rc"
-    mender install "$artifact_file" && return 2 # we expect a failure
+    mender-update install "$artifact_file" && return 2 # we expect a failure
     sleep $timeout_s
     echo "images_not_present: checking for running containers"
     docker ps

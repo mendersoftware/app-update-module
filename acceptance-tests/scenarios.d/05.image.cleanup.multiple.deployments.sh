@@ -59,7 +59,7 @@ function test_phase_run_clean_up() {
             --orchestrator docker-compose \
             --manifests-dir acceptance-tests/data/manifests-1-${i} \
             --application-name myapp0c || return 1
-        mender install "$artifact_file" | tee -a "$log"
+        mender-update install "$artifact_file" | tee -a "$log"
         [[ ${PIPESTATUS[0]} -eq 0 ]] || {
             echo "install artifact failed"
             return 2

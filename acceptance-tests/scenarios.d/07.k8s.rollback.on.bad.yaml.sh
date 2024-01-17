@@ -44,7 +44,7 @@ function test_phase_run_k8s_rollback_on_broken_yaml() {
     mv -f /var/lib/mender/device_type /var/lib/mender/device_type-prev
     echo "device_type=dev0" > /var/lib/mender/device_type
     kubectl get pods --namespace acceptance-tests
-    mender install "$artifact_file" || return 2
+    mender-update install "$artifact_file" || return 2
     sleep "${timeout_s}"
     kubectl get pods --namespace acceptance-tests | grep -q ^postgres-deployment-
     [[ $? -eq 0 ]] || return 4
@@ -57,7 +57,7 @@ function test_phase_run_k8s_rollback_on_broken_yaml() {
     kubectl get services --namespace acceptance-tests | grep -q ^postgres-service
     kubectl get services,secrets,deployments --namespace acceptance-tests
 
-    mender install "$artifact_file_broken_yaml" && return 20
+    mender-update install "$artifact_file_broken_yaml" && return 20
     sleep "${timeout_s}"
     kubectl get pods --namespace acceptance-tests | grep -q ^postgres-deployment-
     [[ $? -eq 0 ]] || return 4

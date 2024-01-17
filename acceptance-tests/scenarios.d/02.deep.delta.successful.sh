@@ -60,7 +60,7 @@ function test_phase_run_deep_delta() {
         --manifests-dir acceptance-tests/data/manifests-1 \
         --application-name myapp2 \
         --deep-delta || return 1
-    mender install "$artifact_file" | tee -a "$log"
+    mender-update install "$artifact_file" | tee -a "$log"
     [[ ${PIPESTATUS[0]} -eq 0 ]] || {
         echo "install artifact failed"
         return 2
