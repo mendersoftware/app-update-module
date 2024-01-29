@@ -40,7 +40,7 @@ function test_phase_run_regular_delta() {
     local image1
     local image2
     local -r timeout_s=32
-    local log="mktemp -u --tmpdir=${temp_dir}"
+    local log=$(mktemp -u --tmpdir=${temp_dir})
 
     echo "entering regular delta run phase"
     image1d=docker.io/library/alpine:3.13
