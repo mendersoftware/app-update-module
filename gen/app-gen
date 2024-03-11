@@ -309,6 +309,56 @@ function parse_parent_child() {
     set -e
 }
 
+# save the deep-delta modified image into new_dir
+oci_deep_delta() {
+    local -r root_dir="$1"
+    local -r current_dir="$2"
+    local -r new_dir="$3"
+    local i
+    local -a current_layers
+    local -a new_layers
+
+    # all the layers from current_dir/manifest.json are xdelta3 with layers from new_dir/manifest
+    # the blobs in new_dir are replaced with sha.vcdiff files (same sha file name with vcdiff extension)
+    #  and the sha.current.vcdiff holds the sha fo the layer from current_dir/manifest.json
+    # the remaining items in the new_dir stay
+
+    set +e
+    echo "OCI deep delta generation"
+    # load the current/layers
+    i=0
+    while read -r; do
+        let i++
+        [[ $i -eq 1 ]] && continue
+        [[ "${REPLY[0]}" == "]" ]] && break
+        current_layers+=("$REPLY")
+    done < <(jq -r '.[0].Layers' < "$current_dir"/manifest.json | sed -e 's/,$//' -e 's/^[ ]*//' -e 's/"//g')
+    # load the new/layers
+    i=0
+    while read -r; do
+        let i++
+        [[ $i -eq 1 ]] && continue
+        [[ "${REPLY[0]}" == "]" ]] && break
+        new_layers+=("$REPLY")
+    done < <(jq -r '.[0].Layers' < "$new_dir"/manifest.json | sed -e 's/,$//' -e 's/^[ ]*//' -e 's/"//g')
+
+    # if the number of layers in the current image is bigger than the one in the new image
+    # we are unable to create a deep delta (no idea what to do with the extra ones in the current)
+    [[ ${#current_layers[@]} -gt ${#new_layers[@]} ]] && {
+        echo "panic: we cant generate deep-deltas when the source image has more layers that the new one, please try without the deep delta flag"
+        return 1
+    }
+
+    # go through the layers from the current image, generate and save the deltas in the new_dir
+    # we "match" the layer by the index from the Layers manifest array
+    for ((i = 0; i < ${#current_layers[@]}; i++)); do
+        $delta_cmd "${current_dir}/${current_layers[${i}]}" "${new_dir}/${new_layers[${i}]}" "${new_dir}/${new_layers[${i}]}.vcdiff" && rm -fv "${new_dir}/${new_layers[${i}]}"
+        echo "${current_layers[${i}]}" > "${new_dir}/${new_layers[${i}]}.source"
+    done
+    echo "OCI deep delta generation done"
+    set +e
+}
+
 # deep_delta "${output_dir}/image-current.img" "${output_dir}/image-new.img" "${output_dir}/image.img"
 deep_delta() {
     local -r root_dir="$1"
@@ -329,6 +379,7 @@ deep_delta() {
     local -A sum2path_new
     local -A sum2path_current
     local tmp_file=$(mktemp)
+    local rc=0
 
     rm -f "$tmp_file"
     mkdir -p "${current_dir}"
@@ -341,6 +392,25 @@ deep_delta() {
         echo "ERROR errors unpacking $new"
         return 1
     }
+
+    if [[ -f "$new_dir"/oci-layout && ! -f "$current_dir"/oci-layout ]]; then
+        echo "cant create deep delta between images of different format"
+        return 1
+    fi
+    if [[ ! -f "$new_dir"/oci-layout && -f "$current_dir"/oci-layout ]]; then
+        echo "cant create deep delta between images of different format"
+        return 1
+    fi
+
+    if [[ -f "$new_dir"/oci-layout && -f "$current_dir"/oci-layout ]]; then
+        # save the deep-delta modified image into new_dir
+        oci_deep_delta "$root_dir" "$current_dir" "$new_dir"
+        rc=$?
+        rm -f "$output"
+        tar -cf "$output" -C "$new_dir" .
+        rm -Rf "$current_dir" "$new_dir"
+        return $rc
+    fi
     parse_parent_child "$current_dir"
     parse_parent_child "$new_dir"
     tree "$current_dir"

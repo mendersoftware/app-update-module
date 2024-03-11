@@ -124,6 +124,22 @@ apply_layer_delta() {
     rm -f "${current_sum_file}" "${new_sum_file}" "${vcdiff}"
 }
 
+# given current and new image directories and the binary delta of a layer
+# apply and save the layer.tar in the new image dir
+apply_layer_delta_oci() {
+    local current_image_dir="$1"
+    local new_image_dir="$2"
+    local vcdiff="$3"
+    local current_file
+    local new_sum_file
+
+    current_file=$(echo "$vcdiff" | sed -e 's/\.vcdiff$//')
+    current_file=$(cat "$current_file".source)
+    current_file="${current_image_dir}/$current_file"
+    new_file=$(echo "$vcdiff" | sed -e 's/\.vcdiff$//')
+    $delta_cmd "$current_file" "${vcdiff}" "${new_file}"
+}
+
 # |-- ecaa1158057a2e325f72c5e43c9847fbef370da5a65d6534b1708c99feb7c0e7
 #|   |-- VERSION
 #|   |-- json
@@ -161,12 +177,32 @@ resolve_deep_delta() {
     current_image_dir="${image_dir}/image-$(sha256sum "${current_image_file}" | cut -f1 -d' ')"
     unpack_image "${input_file}" "${new_image_dir}"
     unpack_image "${current_image_file}" "${current_image_dir}"
-    for vcdiff in "${new_image_dir}"/*/layer.tar.vcdiff; do # TODO: change into something else;
-        if test ! -f "$vcdiff"; then
-            break
+
+    if test -f "${new_image_dir}"/oci-layout; then
+        if test ! -f "${current_image_dir}"/oci-layout; then
+            echo "ERROR: current image is not in OCI format while the new one is, cant continue with deep delta."
+            return 1
         fi
-        apply_layer_delta "${current_image_dir}" "${new_image_dir}" "${vcdiff}"
-    done
+
+        for vcdiff in "${new_image_dir}"/*/*/*.vcdiff; do # FIXME: this is not the way files should be scanned -- change to find and temp file (remember /bin/sh compatibility);
+            if test ! -f "$vcdiff"; then
+                break
+            fi
+            apply_layer_delta_oci "${current_image_dir}" "${new_image_dir}" "${vcdiff}"
+        done
+    else
+        if test -f "${current_image_dir}"/oci-layout; then
+            echo "ERROR: current image is in OCI format while the new one is not, cant continue with deep delta."
+            return 1
+        fi
+
+        for vcdiff in "${new_image_dir}"/*/layer.tar.vcdiff; do # FIXME: this is not the way files should be scanned -- change to find and temp file (remember /bin/sh compatibility);
+            if test ! -f "$vcdiff"; then
+                break
+            fi
+            apply_layer_delta "${current_image_dir}" "${new_image_dir}" "${vcdiff}"
+        done
+    fi
     rm -f "${input_file}"
     tar cf "${input_file}" -C "${new_image_dir}" .
 }
