@@ -75,8 +75,8 @@ k8s_ctr_address=""
 k8s_namespace=""
 platform=""
 manifests_dir=""
-declare -a images
-declare -a images_shas
+declare -a images=()
+declare -a images_shas=()
 deep_delta=false
 
 set +u
@@ -209,8 +209,22 @@ if [ -z "${manifests_dir}" ]; then
 fi
 
 if [ ${#images[@]} -lt 1 ]; then
-    echo "No images specified. Aborting." >&2
-    show_help_and_exit_error
+    if [[ "${orchestrator}" == "${DOCKER_COMPOSE_ORCHESTRATOR}" ]]; then
+        echo "No specific images specified. Will try to extract from docker-compose.yaml file." >&2
+
+        while read -r img; do
+            images+=("$img")
+            images+=("$img")
+        done < <( docker compose --project-directory "$manifests_dir" config --images)
+
+        if [ ${#images[@]} -lt 1 ]; then
+            echo "Image extraction from docker-compose.yaml failed. Aborting." >&2
+            show_help_and_exit_error
+        fi
+    else
+        echo "No images specified. Aborting." >&2
+        show_help_and_exit_error
+    fi
 fi
 
 if [[ "${deep_delta}" == "true" && "${orchestrator}" == "$K8S_ORCHESTRATOR"  ]]; then
