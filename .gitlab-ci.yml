@@ -26,7 +26,7 @@ test:smoketests:
     DOCKER_BUILDKIT: 0
     COMPOSE_DOCKER_CLI_BUILD: 0
   tags:
-    - docker
+    - hetzner-amd-beefy
   image: tiangolo/docker-with-compose
   services:
     - name: docker:20.10.10-dind-alpine3.14
@@ -46,6 +46,9 @@ test:smoketests:
 test:acceptancetests:
   stage: test
   image: ubuntu:20.04
+  tags:
+    # docker privileged is required for this job
+    - mender-qa-worker-generic-light
   services:
     - docker:23.0.5-dind-alpine3.17
   before_script:
