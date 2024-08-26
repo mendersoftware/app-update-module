@@ -7,6 +7,7 @@ variables:
 
 stages:
   - test
+  - build_release
 
 include:
   - project: 'Northern.tech/Mender/mendertesting'
@@ -26,7 +27,7 @@ test:smoketests:
     DOCKER_BUILDKIT: 0
     COMPOSE_DOCKER_CLI_BUILD: 0
   tags:
-    - docker
+    - hetzner-amd-beefy
   image: tiangolo/docker-with-compose
   services:
     - name: docker:20.10.10-dind-alpine3.14
@@ -46,8 +47,11 @@ test:smoketests:
 test:acceptancetests:
   stage: test
   image: ubuntu:20.04
+  tags:
+    # docker privileged is required for this job
+    - mender-qa-worker-generic-light
   services:
-    - docker:dind
+    - docker:23.0.5-dind-alpine3.17
   before_script:
     - apt update && apt install -yy bash wget xz-utils awscli docker.io curl make xdelta3 tree containerd
     - docker ps
@@ -66,3 +70,19 @@ test:acceptancetests:
 
   script:
     - ./acceptance-tests/run.sh
+
+build_release:
+  stage: build_release
+  image: golang:1.23
+  variables:
+    GIT_CLIFF_VERSION: "2.5.0"
+    GORELEASER_PREVIOUS_TAG: "1.11.0"
+  script:
+    - go install github.com/goreleaser/goreleaser/v2@latest
+    - wget https://github.com/orhun/git-cliff/releases/download/v${GIT_CLIFF_VERSION}/git-cliff-${GIT_CLIFF_VERSION}.deb
+    - apt install ./git-cliff-${GIT_CLIFF_VERSION}.deb
+    - goreleaser release
+  artifacts:
+    expire_in: 2w
+    paths:
+      - dist
