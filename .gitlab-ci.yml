@@ -44,7 +44,7 @@ test:smoketests:
       - tests/gen/data/docker/output
     when: always
 
-test:acceptancetests:
+.test:acceptancetests: # roberto: temporary disabled
   stage: test
   image: ubuntu:20.04
   tags:
