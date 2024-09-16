@@ -4,9 +4,36 @@ variables:
   DOCKER_CERT_PATH: "/certs/client"
   DOCKER_TLS_VERIFY: "1"
   DOCKER_TLS_CERTDIR: "/certs"
+  DEFAULT_BRANCH: "master"
+  GITHUB_REPO_URL:
+    description: "The Github Repo URL for release-please, in the format of 'owner/repo'"
+    value: "mendersoftware/app-update-module"
+  GITHUB_USER:
+    description: "The Github user for release-please"
+    value: "mender-test-bot"
+  GITHUB_USER_NAME:
+    description: "The Github username for release-please"
+    value: "Mender Test Bot"
+  GITHUB_USER_EMAIL:
+    description: "The Github user email for release-please"
+    value: "mender@northern.tech"
+  GITHUB_CHANGELOG_REPO_URL:
+    description: "The Github Repo URL where to push the changelog"
+    value: "mendersoftware/mender-docs-changelog"
+  CHANGELOG_REMOTE_FILE:
+    description: "The changelog file in the remote changelog repo"
+    value: "70.app-update-module/docs.md"
+  RUN_RELEASE:
+    description: "Run a new release"
+    value: "false"
+    options:
+      - "true"
+      - "false"
 
 stages:
   - test
+  - changelog
+  - release
 
 include:
   - project: 'Northern.tech/Mender/mendertesting'
@@ -69,3 +96,105 @@ test:acceptancetests:
 
   script:
     - ./acceptance-tests/run.sh
+
+changelog:
+  image: ${CI_DEPENDENCY_PROXY_DIRECT_GROUP_IMAGE_PREFIX}/node:20
+  stage: changelog
+  tags:
+    - hetzner-amd-beefy
+  rules:
+    - if: $RUN_RELEASE == "true"
+      when: never
+    - if: $CI_COMMIT_BRANCH =~ "/^\d+\.\d+\.x$/"
+    - if: $CI_COMMIT_BRANCH == $DEFAULT_BRANCH
+  before_script:
+    # install release-please
+    - npm install -g release-please
+    # install github-cli
+    - |
+      mkdir -p -m 755 /etc/apt/keyrings \
+        && wget -qO- https://cli.github.com/packages/githubcli-archive-keyring.gpg | tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null \
+        && chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg \
+        && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
+        && apt update \
+        && apt install gh jq -y
+    # Setting up git
+    - |
+      echo "INFO - setting up git"
+      git config --global user.email "${GITHUB_USER_EMAIL}"
+      git config --global user.name "${GITHUB_USER_NAME}"
+    - npm install -g git-cliff
+  script:
+    - release-please release-pr
+        --token=${GITHUB_BOT_TOKEN_REPO_FULL}
+        --repo-url=${GITHUB_REPO_URL}
+        --target-branch=${CI_COMMIT_REF_NAME}
+    # git cliff: override the changelog
+    - test $GIT_CLIFF == "false" && echo "INFO - Skipping git-cliff" && exit 0
+    - git clone https://${GITHUB_USER}:${GITHUB_BOT_TOKEN_REPO_FULL}@github.com/${GITHUB_REPO_URL}
+    - cd ${GITHUB_REPO_URL#*/}
+    - RELEASE_PLEASE_PR=$(gh pr list --author "mender-test-bot" --head "release-please--branches--${CI_COMMIT_REF_NAME}" --json number | jq -r '.[0].number // empty')
+    - test -z "$RELEASE_PLEASE_PR" && echo "No release-please PR found" && exit 0
+    - echo "INFO - generating changelog notes from git cliff"
+        && gh pr checkout $RELEASE_PLEASE_PR
+        && git cliff --output CHANGELOG.md --bump
+        && git add CHANGELOG.md
+        && git commit --amend -s --no-edit
+        && git push origin --force
+    - echo "INFO - updating PR body"
+        && export GITHUB_TOKEN=${GITHUB_BOT_TOKEN_REPO_FULL}
+        && git cliff --unreleased --bump -o tmp_pr_body.md
+        && gh pr edit $RELEASE_PLEASE_PR --body-file tmp_pr_body.md
+        && rm tmp_pr_body.md
+
+release:github:
+  image: ${CI_DEPENDENCY_PROXY_DIRECT_GROUP_IMAGE_PREFIX}/node:20
+  stage: release
+  tags:
+    - hetzner-amd-beefy
+  rules:
+    - if: $CI_COMMIT_BRANCH =~ "/^\d+\.\d+\.x$/" && $RUN_RELEASE == "true"
+    - if: $CI_COMMIT_BRANCH == $DEFAULT_BRANCH && $RUN_RELEASE == "true"
+  script:
+    - npm install -g release-please
+    - release-please github-release
+        --token=${GITHUB_BOT_TOKEN_REPO_FULL}
+        --repo-url=${GITHUB_REPO_URL}
+        --target-branch=${CI_COMMIT_REF_NAME}
+
+release:mender-docs-changelog:
+  image: alpine:latest
+  stage: release
+  tags:
+    - hetzner-amd-beefy
+  rules:
+    - if: $CI_COMMIT_BRANCH == $DEFAULT_BRANCH && $RUN_RELEASE == "true"
+  before_script:
+    - apk add git bash curl jq github-cli
+    - |
+      echo "INFO - setting up git"
+      git config --global user.email ${GITHUB_USER_EMAIL}
+      git config --global user.name ${GITHUB_USER_NAME}
+      export GITHUB_TOKEN=${GITHUB_BOT_TOKEN_REPO_FULL}  # used for gh cli
+  script:
+    - git clone https://${GITHUB_USER}:${GITHUB_TOKEN_NT}@github.com/${GITHUB_CHANGELOG_REPO_URL}
+    - cd ${GITHUB_CHANGELOG_REPO_URL#*/}
+    - git checkout -b changelog-${CI_PIPELINE_ID}
+    - |
+      cat docs_header.md > ${CHANGELOG_REMOTE_FILE}
+      cat ../CHANGELOG.md >> ${CHANGELOG_REMOTE_FILE}
+      git add ${CHANGELOG_REMOTE_FILE}
+      git commit -s -m "chore: add app-update-module changelog"
+      git push origin changelog-${CI_PIPELINE_ID}
+    - gh pr create --title "Update CHANGELOG.md" --body "Automated change to the CHANGELOG.md file" --base master --head changelog-${CI_PIPELINE_ID}
+
+release:mender-dist-packages:
+  stage: release
+  when: manual
+  trigger:
+    project: Northern.tech/Mender/mender-dist-packages
+    strategy: depend
+  variables:
+    MENDER_APP_UPDATE_MODULE_VERSION: ${CI_COMMIT_REF_NAME}
+  rules:
+    - if: $CI_COMMIT_TAG =~ "/^\d+\.\d+\.x$/"
