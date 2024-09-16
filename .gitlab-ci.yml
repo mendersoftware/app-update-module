@@ -29,6 +29,12 @@ variables:
     options:
       - "true"
       - "false"
+  GIT_CLIFF:
+    description: "Run git cliff to override the release-please changelog"
+    value: "true"
+    options:
+      - "true"
+      - "false"
 
 stages:
   - test
