@@ -49,6 +49,12 @@ include:
       - '.gitlab-ci-github-status-updates.yml'
       - '.gitlab-ci-check-shell-format.yml'
 
+.docker_login_registries: &docker_login_registries |
+  docker login -u "$REGISTRY_MENDER_IO_USERNAME" -p "$REGISTRY_MENDER_IO_PASSWORD" registry.mender.io || \
+    echo "Warning: registry.mender.io credentials unavailable or invalid"
+  docker login -u "$DOCKER_HUB_USERNAME" -p "$DOCKER_HUB_PASSWORD" || \
+    echo "Warning: Docker credentials unavailable or invalid"
+
 test:check-shell-formatting:
   before_script:
     - SHELL_SCRIPTS="src/app src/app-modules/docker-compose gen/app-gen tests/app/run.sh tests/app/scenarios/00_basic_ArtifactInstall.run.sh acceptance-tests/scenarios.d/00.basic.non.delta.successful.sh acceptance-tests/run.sh acceptance-tests/bt/main.sh acceptance-tests/bt/lib/functions.sh acceptance-tests/bt/bt.sh"
@@ -59,10 +65,11 @@ test:smoketests:
     DOCKER_BUILDKIT: 0
     COMPOSE_DOCKER_CLI_BUILD: 0
   tags:
-    - hetzner-amd-beefy
-  image: tiangolo/docker-with-compose
+    # docker login doesn't work for this job: Cannot perform an interactive login from a non TTY device
+    - mender-qa-worker-generic-light
+  image: ${CI_DEPENDENCY_PROXY_DIRECT_GROUP_IMAGE_PREFIX}/tiangolo/docker-with-compose
   services:
-    - name: docker:20.10.10-dind-alpine3.14
+    - name: ${CI_DEPENDENCY_PROXY_DIRECT_GROUP_IMAGE_PREFIX}/docker:20.10.10-dind-alpine3.14
       alias: docker
   before_script:
     - apk --update --no-cache add bash gawk curl aws-cli tree xz jq wget xdelta3 openssl1.1-compat gcompat
@@ -78,13 +85,15 @@ test:smoketests:
 
 test:acceptancetests:
   stage: test
-  image: ubuntu:20.04
+  image: ${CI_DEPENDENCY_PROXY_DIRECT_GROUP_IMAGE_PREFIX}/ubuntu:20.04
   tags:
     # docker privileged is required for this job
     - mender-qa-worker-generic-light
   services:
-    - docker:23.0.5-dind-alpine3.17
+    - name: ${CI_DEPENDENCY_PROXY_DIRECT_GROUP_IMAGE_PREFIX}/docker:23.0.5-dind-alpine3.17
+      alias: docker
   before_script:
+    - *docker_login_registries
     - apt update && apt install -yy bash wget xz-utils awscli docker.io curl make xdelta3 tree containerd
     - docker ps
     - docker info
@@ -170,7 +179,7 @@ release:github:
         --target-branch=${CI_COMMIT_REF_NAME}
 
 release:mender-docs-changelog:
-  image: alpine:latest
+  image: ${CI_DEPENDENCY_PROXY_DIRECT_GROUP_IMAGE_PREFIX}/alpine:latest
   stage: release
   tags:
     - hetzner-amd-beefy
