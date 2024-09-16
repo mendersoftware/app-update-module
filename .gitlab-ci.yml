@@ -131,7 +131,7 @@ changelog:
       git config --global user.name "${GITHUB_USER_NAME}"
     - npm install -g git-cliff
     # GITHUB_TOKEN for Github cli authentication
-    - export GITHUB_TOKEN=${GITHUB_BOT_TOKEN_REPO_FULL}
+    - export GITHUB_TOKEN=${GITHUB_CLI_TOKEN}
   script:
     - release-please release-pr
         --token=${GITHUB_BOT_TOKEN_REPO_FULL}
