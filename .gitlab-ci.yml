@@ -13,7 +13,7 @@ variables:
     value: "mender-test-bot"
   GITHUB_USER_NAME:
     description: "The Github username for release-please"
-    value: "Mender Test Bot"
+    value: "mender test bot"
   GITHUB_USER_EMAIL:
     description: "The Github user email for release-please"
     value: "mender@northern.tech"

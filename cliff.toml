@@ -27,7 +27,7 @@ body = """
     {%- for commit in commits | unique(attribute="message") %}
         {%- if commit.scope -%}
         {% else -%}
-            - {{ commit.message | upper_first }} {% if commit.links %}({% for link in commit.links | unique(attribute="text") %}[{{ link.text }}]({{ link.href }}){% endfor -%}){% endif %}
+            - {{ commit.message | upper_first }} {% if commit.links %}({% for link in commit.links | unique(attribute="text") %}[{{ link.text }}]({{ link.href }}){% endfor -%}){% endif %} ([{{ commit.id | truncate(length=7, end="") }}]({{ commit.id }}))
             {% if commit.breaking -%}
             {% raw %}  {% endraw %}- **BREAKING**: {{commit.breaking_description}}
             {% endif -%}
