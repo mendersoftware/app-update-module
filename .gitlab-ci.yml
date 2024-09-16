@@ -130,6 +130,8 @@ changelog:
       git config --global user.email "${GITHUB_USER_EMAIL}"
       git config --global user.name "${GITHUB_USER_NAME}"
     - npm install -g git-cliff
+    # GITHUB_TOKEN for Github cli authentication
+    - export GITHUB_TOKEN=${GITHUB_BOT_TOKEN_REPO_FULL}
   script:
     - release-please release-pr
         --token=${GITHUB_BOT_TOKEN_REPO_FULL}
@@ -148,7 +150,6 @@ changelog:
         && git commit --amend -s --no-edit
         && git push origin --force
     - echo "INFO - updating PR body"
-        && export GITHUB_TOKEN=${GITHUB_BOT_TOKEN_REPO_FULL}
         && git cliff --unreleased --bump -o tmp_pr_body.md
         && gh pr edit $RELEASE_PLEASE_PR --body-file tmp_pr_body.md
         && rm tmp_pr_body.md
