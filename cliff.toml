@@ -27,7 +27,16 @@ body = """
     {%- for commit in commits | unique(attribute="message") %}
         {%- if commit.scope -%}
         {% else -%}
-            - {{ commit.message | upper_first }} {% if commit.links %}({% for link in commit.links | unique(attribute="text") %}[{{ link.text }}]({{ link.href }}){% endfor -%}){% endif %} ([{{ commit.id | truncate(length=7, end="") }}]({{ commit.id }}))
+            - {{ commit.message | upper_first }}\
+                  {% if commit.links %}\
+                    ({% for link in commit.links | unique(attribute="text") %}\
+                        [{{ link.text }}]({{ link.href }})\
+                    {% endfor -%})\
+                  {% endif %} \
+                  ([{{ commit.id | truncate(length=7, end="") }}]\
+                  (https://github.com/{{ remote.github.owner }}/{{ remote.github.repo }}/commit/{{ commit.id }})) \
+                  {% if commit.github.username %} by @{{ commit.github.username }}{%- endif %}\
+                  {% if commit.github.pr_number %} in #{{ commit.github.pr_number }}{%- endif %}
             {% if commit.breaking -%}
             {% raw %}  {% endraw %}- **BREAKING**: {{commit.breaking_description}}
             {% endif -%}
@@ -105,4 +114,3 @@ sort_commits = "oldest"
 [bump]
 features_always_bump_minor = true
 breaking_always_bump_major = true
-

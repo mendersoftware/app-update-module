@@ -154,12 +154,12 @@ changelog:
     - test -z "$RELEASE_PLEASE_PR" && echo "No release-please PR found" && exit 0
     - echo "INFO - generating changelog notes from git cliff"
         && gh pr checkout $RELEASE_PLEASE_PR
-        && git cliff --output CHANGELOG.md --bump
+        && git cliff --output CHANGELOG.md --bump --github-repo ${GITHUB_REPO_URL}
         && git add CHANGELOG.md
         && git commit --amend -s --no-edit
         && git push origin --force
     - echo "INFO - updating PR body"
-        && git cliff --unreleased --bump -o tmp_pr_body.md
+        && git cliff --unreleased --bump -o tmp_pr_body.md --github-repo ${GITHUB_REPO_URL}
         && gh pr edit $RELEASE_PLEASE_PR --body-file tmp_pr_body.md
         && rm tmp_pr_body.md
 
