@@ -13,7 +13,7 @@ variables:
     value: "mender-test-bot"
   GITHUB_USER_NAME:
     description: "The Github username for release-please"
-    value: "mender test bot"
+    value: "mender-test-bot"
   GITHUB_USER_EMAIL:
     description: "The Github user email for release-please"
     value: "mender@northern.tech"
@@ -150,7 +150,7 @@ changelog:
     - test $GIT_CLIFF == "false" && echo "INFO - Skipping git-cliff" && exit 0
     - git clone https://${GITHUB_USER}:${GITHUB_BOT_TOKEN_REPO_FULL}@github.com/${GITHUB_REPO_URL}
     - cd ${GITHUB_REPO_URL#*/}
-    - RELEASE_PLEASE_PR=$(gh pr list --author "mender-test-bot" --head "release-please--branches--${CI_COMMIT_REF_NAME}" --json number | jq -r '.[0].number // empty')
+    - RELEASE_PLEASE_PR=$(gh pr list --author "${GITHUB_USER_NAME}" --head "release-please--branches--${CI_COMMIT_REF_NAME}" --json number | jq -r '.[0].number // empty')
     - test -z "$RELEASE_PLEASE_PR" && echo "No release-please PR found" && exit 0
     - echo "INFO - generating changelog notes from git cliff"
         && gh pr checkout $RELEASE_PLEASE_PR
