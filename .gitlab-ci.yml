@@ -198,7 +198,7 @@ release:mender-docs-changelog:
     - git checkout -b changelog-${CI_PIPELINE_ID}
     - |
       cat ../docs_header.md > ${CHANGELOG_REMOTE_FILE}
-      cat ../CHANGELOG.md >> ${CHANGELOG_REMOTE_FILE}
+      cat ../CHANGELOG.md | grep -v -E '^---' >> ${CHANGELOG_REMOTE_FILE}
       git add ${CHANGELOG_REMOTE_FILE}
       git commit -s -m "chore: add app-update-module changelog"
       git push origin changelog-${CI_PIPELINE_ID}
