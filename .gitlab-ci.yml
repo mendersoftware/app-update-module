@@ -184,7 +184,7 @@ release:mender-docs-changelog:
   tags:
     - hetzner-amd-beefy
   rules:
-    - if: $CI_COMMIT_BRANCH == $DEFAULT_BRANCH && $RUN_RELEASE == "true"
+    - if: $CI_COMMIT_TAG =~ "/^\d+\.\d+\.\d+$/"
   before_script:
     - apk add git bash curl jq github-cli
     - |
@@ -197,7 +197,7 @@ release:mender-docs-changelog:
     - cd ${GITHUB_CHANGELOG_REPO_URL#*/}
     - git checkout -b changelog-${CI_PIPELINE_ID}
     - |
-      cat docs_header.md > ${CHANGELOG_REMOTE_FILE}
+      cat ../docs_header.md > ${CHANGELOG_REMOTE_FILE}
       cat ../CHANGELOG.md >> ${CHANGELOG_REMOTE_FILE}
       git add ${CHANGELOG_REMOTE_FILE}
       git commit -s -m "chore: add app-update-module changelog"
@@ -211,6 +211,6 @@ release:mender-dist-packages:
     project: Northern.tech/Mender/mender-dist-packages
     strategy: depend
   variables:
-    MENDER_APP_UPDATE_MODULE_VERSION: ${CI_COMMIT_REF_NAME}
+    MENDER_APP_UPDATE_MODULE_VERSION: ${CI_COMMIT_TAG}
   rules:
-    - if: $CI_COMMIT_TAG =~ "/^\d+\.\d+\.x$/"
+    - if: $CI_COMMIT_TAG =~ "/^\d+\.\d+\.\d+$/"
