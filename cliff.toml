@@ -1,6 +1,12 @@
 # git-cliff ~ configuration file
 # https://git-cliff.org/docs/configuration
 
+
+# Documentation:
+# Set a script step like this in the pipeline where git cliff is used: 
+# wget https://github.com/mendersoftware/mendertesting/blob/master/utils/cliff.toml
+
+
 [changelog]
 # template for the changelog footer
 header = """---"""

@@ -141,6 +141,8 @@ changelog:
     - npm install -g git-cliff
     # GITHUB_TOKEN for Github cli authentication
     - export GITHUB_TOKEN=${GITHUB_CLI_TOKEN}
+    # getting the centralized git cliff config
+    - wget --output-document cliff.toml https://raw.githubusercontent.com/mendersoftware/mendertesting/master/utils/cliff.toml
   script:
     - release-please release-pr
         --token=${GITHUB_BOT_TOKEN_REPO_FULL}
