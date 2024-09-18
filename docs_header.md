@@ -6,4 +6,3 @@ shortcode-core:
     active: false
 github: false
 ---
-

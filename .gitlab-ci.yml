@@ -141,6 +141,8 @@ changelog:
     - npm install -g git-cliff
     # GITHUB_TOKEN for Github cli authentication
     - export GITHUB_TOKEN=${GITHUB_CLI_TOKEN}
+    # getting the centralized git cliff config
+    - wget --output-document cliff.toml https://raw.githubusercontent.com/mendersoftware/mendertesting/master/utils/cliff.toml
   script:
     - release-please release-pr
         --token=${GITHUB_BOT_TOKEN_REPO_FULL}
@@ -154,12 +156,12 @@ changelog:
     - test -z "$RELEASE_PLEASE_PR" && echo "No release-please PR found" && exit 0
     - echo "INFO - generating changelog notes from git cliff"
         && gh pr checkout $RELEASE_PLEASE_PR
-        && git cliff --output CHANGELOG.md --bump
+        && git cliff --output CHANGELOG.md --bump --github-repo ${GITHUB_REPO_URL}
         && git add CHANGELOG.md
         && git commit --amend -s --no-edit
         && git push origin --force
     - echo "INFO - updating PR body"
-        && git cliff --unreleased --bump -o tmp_pr_body.md
+        && git cliff --unreleased --bump -o tmp_pr_body.md --github-repo ${GITHUB_REPO_URL}
         && gh pr edit $RELEASE_PLEASE_PR --body-file tmp_pr_body.md
         && rm tmp_pr_body.md
 
@@ -184,7 +186,7 @@ release:mender-docs-changelog:
   tags:
     - hetzner-amd-beefy
   rules:
-    - if: $CI_COMMIT_BRANCH == $DEFAULT_BRANCH && $RUN_RELEASE == "true"
+    - if: $CI_COMMIT_TAG =~ "/^\d+\.\d+\.\d+$/"
   before_script:
     - apk add git bash curl jq github-cli
     - |
@@ -197,8 +199,8 @@ release:mender-docs-changelog:
     - cd ${GITHUB_CHANGELOG_REPO_URL#*/}
     - git checkout -b changelog-${CI_PIPELINE_ID}
     - |
-      cat docs_header.md > ${CHANGELOG_REMOTE_FILE}
-      cat ../CHANGELOG.md >> ${CHANGELOG_REMOTE_FILE}
+      cat ../docs_header.md > ${CHANGELOG_REMOTE_FILE}
+      cat ../CHANGELOG.md | grep -v -E '^---' >> ${CHANGELOG_REMOTE_FILE}
       git add ${CHANGELOG_REMOTE_FILE}
       git commit -s -m "chore: add app-update-module changelog"
       git push origin changelog-${CI_PIPELINE_ID}
@@ -211,6 +213,6 @@ release:mender-dist-packages:
     project: Northern.tech/Mender/mender-dist-packages
     strategy: depend
   variables:
-    MENDER_APP_UPDATE_MODULE_VERSION: ${CI_COMMIT_REF_NAME}
+    MENDER_APP_UPDATE_MODULE_VERSION: ${CI_COMMIT_TAG}
   rules:
-    - if: $CI_COMMIT_TAG =~ "/^\d+\.\d+\.x$/"
+    - if: $CI_COMMIT_TAG =~ "/^\d+\.\d+\.\d+$/"
