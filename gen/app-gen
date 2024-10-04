@@ -21,7 +21,7 @@ K8S_ORCHESTRATOR="k8s"
 DOCKER_COMPOSE_ORCHESTRATOR="docker-compose"
 
 show_help() {
-    cat << EOF
+	cat <<EOF
 
 Simple tool to generate Mender Artifact suitable for App Update Module
 
@@ -48,20 +48,20 @@ EOF
 }
 
 show_help_and_exit_error() {
-    show_help
-    exit 1
+	show_help
+	exit 1
 }
 
 check_dependency() {
-    if ! which "$1" > /dev/null; then
-        echo "The $1 utility is not found but required to generate Artifacts." >&2
-        return 1
-    fi
+	if ! which "$1" >/dev/null; then
+		echo "The $1 utility is not found but required to generate Artifacts." >&2
+		return 1
+	fi
 }
 
 if ! check_dependency mender-artifact; then
-    echo "Please follow the instructions here to install mender-artifact and then try again: https://docs.mender.io/downloads#mender-artifact" >&2
-    exit 1
+	echo "Please follow the instructions here to install mender-artifact and then try again: https://docs.mender.io/downloads#mender-artifact" >&2
+	exit 1
 fi
 
 delta_cmd="xdelta3 -e -s"
@@ -81,536 +81,536 @@ deep_delta=false
 
 set +u
 while test $# -gt 0; do
-    set -u
-    case "$1" in
-        --application-name | -a)
-            if [ -z "$2" ]; then
-                show_help_and_exit_error
-            fi
-            application_name="$2"
-            if [[ $application_name =~ $APPLICATION_NAME_ALLOWED_REGEX ]]; then
-                echo "ERROR: application name must contain only alpha-numerics, _ or -" >&2
-                show_help_and_exit_error
-            fi
-            shift 2
-            ;;
-        --manifests-dir | -m)
-            if [ -z "$2" ]; then
-                show_help_and_exit_error
-            fi
-            manifests_dir="$2"
-            shift 2
-            ;;
-        --orchestrator | -o)
-            if [ -z "$2" ]; then
-                show_help_and_exit_error
-            fi
-            orchestrator="$2"
-            shift 2
-            ;;
-        --k8s-ctr-address | -c)
-            if [ -z "$2" ]; then
-                show_help_and_exit_error
-            fi
-            k8s_ctr_address="$2"
-            shift 2
-            ;;
-        --k8s-namespace | -s)
-            if [ -z "$2" ]; then
-                show_help_and_exit_error
-            fi
-            k8s_namespace="$2"
-            shift 2
-            ;;
-        --platform | -p)
-            if [ -z "$2" ]; then
-                show_help_and_exit_error
-            fi
-            platform="$2"
-            shift 2
-            ;;
-        --image | -i)
-            # --image docker.io/library/debian:11,docker.io/library/debian:latest@sha256:a94cd7c7d58f483affd5937853ad4d24caa18cd7c2ec9ef65a9e528dfbc5eb07 --image docker.io/library/postgres:15.1
-            if [ -z "$2" ]; then
-                show_help_and_exit_error
-            fi
-            images+=($(echo "$2" | cut -f1 -d,)) # current
-            images+=($(echo "$2" | cut -f2 -d,)) # new, if current!=new then we need to generate delta.
-            shift 2
-            ;;
-        --deep-delta | -d)
-            deep_delta=true
-            shift 1
-            ;;
-        --device-type | -t)
-            if [ -z "$2" ]; then
-                show_help_and_exit_error
-            fi
-            device_types+=("-t" "$2")
-            shift 2
-            ;;
-        --artifact-name | -n)
-            if [ -z "$2" ]; then
-                show_help_and_exit_error
-            fi
-            artifact_name=$2
-            shift 2
-            ;;
-        --output-path | -o)
-            if [ -z "$2" ]; then
-                show_help_and_exit_error
-            fi
-            output_path=$2
-            shift 2
-            ;;
-        -h | --help)
-            show_help
-            exit 0
-            ;;
-        --)
-            shift
-            passthrough_args="$@"
-            break
-            ;;
-        -*)
-            echo "Error: unsupported option $1" >&2
-            show_help_and_exit_error
-            ;;
-        *)
-            shift
-            ;;
-    esac
-    set +u
+	set -u
+	case "$1" in
+	--application-name | -a)
+		if [ -z "$2" ]; then
+			show_help_and_exit_error
+		fi
+		application_name="$2"
+		if [[ $application_name =~ $APPLICATION_NAME_ALLOWED_REGEX ]]; then
+			echo "ERROR: application name must contain only alpha-numerics, _ or -" >&2
+			show_help_and_exit_error
+		fi
+		shift 2
+		;;
+	--manifests-dir | -m)
+		if [ -z "$2" ]; then
+			show_help_and_exit_error
+		fi
+		manifests_dir="$2"
+		shift 2
+		;;
+	--orchestrator | -o)
+		if [ -z "$2" ]; then
+			show_help_and_exit_error
+		fi
+		orchestrator="$2"
+		shift 2
+		;;
+	--k8s-ctr-address | -c)
+		if [ -z "$2" ]; then
+			show_help_and_exit_error
+		fi
+		k8s_ctr_address="$2"
+		shift 2
+		;;
+	--k8s-namespace | -s)
+		if [ -z "$2" ]; then
+			show_help_and_exit_error
+		fi
+		k8s_namespace="$2"
+		shift 2
+		;;
+	--platform | -p)
+		if [ -z "$2" ]; then
+			show_help_and_exit_error
+		fi
+		platform="$2"
+		shift 2
+		;;
+	--image | -i)
+		# --image docker.io/library/debian:11,docker.io/library/debian:latest@sha256:a94cd7c7d58f483affd5937853ad4d24caa18cd7c2ec9ef65a9e528dfbc5eb07 --image docker.io/library/postgres:15.1
+		if [ -z "$2" ]; then
+			show_help_and_exit_error
+		fi
+		images+=($(echo "$2" | cut -f1 -d,)) # current
+		images+=($(echo "$2" | cut -f2 -d,)) # new, if current!=new then we need to generate delta.
+		shift 2
+		;;
+	--deep-delta | -d)
+		deep_delta=true
+		shift 1
+		;;
+	--device-type | -t)
+		if [ -z "$2" ]; then
+			show_help_and_exit_error
+		fi
+		device_types+=("-t" "$2")
+		shift 2
+		;;
+	--artifact-name | -n)
+		if [ -z "$2" ]; then
+			show_help_and_exit_error
+		fi
+		artifact_name=$2
+		shift 2
+		;;
+	--output-path | -o)
+		if [ -z "$2" ]; then
+			show_help_and_exit_error
+		fi
+		output_path=$2
+		shift 2
+		;;
+	-h | --help)
+		show_help
+		exit 0
+		;;
+	--)
+		shift
+		passthrough_args="$@"
+		break
+		;;
+	-*)
+		echo "Error: unsupported option $1" >&2
+		show_help_and_exit_error
+		;;
+	*)
+		shift
+		;;
+	esac
+	set +u
 done
 
 if [ -z "${artifact_name}" ]; then
-    echo "Artifact name not specified. Aborting." >&2
-    show_help_and_exit_error
+	echo "Artifact name not specified. Aborting." >&2
+	show_help_and_exit_error
 fi
 
 if [ -z "${device_types}" ]; then
-    echo "Device type not specified. Aborting." >&2
-    show_help_and_exit_error
+	echo "Device type not specified. Aborting." >&2
+	show_help_and_exit_error
 fi
 
 if [ -z "${orchestrator}" ]; then
-    echo "Orchestrator not specified. Aborting." >&2
-    show_help_and_exit_error
+	echo "Orchestrator not specified. Aborting." >&2
+	show_help_and_exit_error
 fi
 
 if [ -z "${platform}" ]; then
-    echo "Platform not specified. Aborting." >&2
-    show_help_and_exit_error
+	echo "Platform not specified. Aborting." >&2
+	show_help_and_exit_error
 fi
 
 if [ -z "${manifests_dir}" ]; then
-    echo "Directory containing manifests not specified. Aborting." >&2
-    show_help_and_exit_error
+	echo "Directory containing manifests not specified. Aborting." >&2
+	show_help_and_exit_error
 fi
 
 if [ ${#images[@]} -lt 1 ]; then
-    if [[ "${orchestrator}" == "${DOCKER_COMPOSE_ORCHESTRATOR}" ]]; then
-        echo "No specific images specified. Will try to extract from docker-compose.yaml file." >&2
+	if [[ "${orchestrator}" == "${DOCKER_COMPOSE_ORCHESTRATOR}" ]]; then
+		echo "No specific images specified. Will try to extract from docker-compose.yaml file." >&2
 
-        while read -r img; do
-            images+=("$img")
-            images+=("$img")
-        done < <( docker compose --project-directory "$manifests_dir" config --images)
+		while read -r img; do
+			images+=("$img")
+			images+=("$img")
+		done < <(docker compose --project-directory "$manifests_dir" config --images)
 
-        if [ ${#images[@]} -lt 1 ]; then
-            echo "Image extraction from docker-compose.yaml failed. Aborting." >&2
-            show_help_and_exit_error
-        fi
-    else
-        echo "No images specified. Aborting." >&2
-        show_help_and_exit_error
-    fi
+		if [ ${#images[@]} -lt 1 ]; then
+			echo "Image extraction from docker-compose.yaml failed. Aborting." >&2
+			show_help_and_exit_error
+		fi
+	else
+		echo "No images specified. Aborting." >&2
+		show_help_and_exit_error
+	fi
 fi
 
-if [[ "${deep_delta}" == "true" && "${orchestrator}" == "$K8S_ORCHESTRATOR"  ]]; then
-    echo "deep deltas are currently not supported with $K8S_ORCHESTRATOR orchestrator." >&2
-    show_help_and_exit_error
+if [[ "${deep_delta}" == "true" && "${orchestrator}" == "$K8S_ORCHESTRATOR" ]]; then
+	echo "deep deltas are currently not supported with $K8S_ORCHESTRATOR orchestrator." >&2
+	show_help_and_exit_error
 fi
 
 temp_dir="$(mktemp -d)"
 [[ "${temp_dir}" == "" ]] && {
-    echo "cant get the temporary directory" >&2
-    show_help_and_exit_error
+	echo "cant get the temporary directory" >&2
+	show_help_and_exit_error
 }
 mkdir "${temp_dir}/images"
 
 function cleanup() {
-    rm -Rf "$temp_dir"
+	rm -Rf "$temp_dir"
 }
 trap cleanup EXIT SIGQUIT SIGTERM
 
 get_image_sha() {
-    local -r url="$1"
+	local -r url="$1"
 
-    [[ "$url" == "" ]] && {
-        echo none
-        return 0
-    }
-    if [[ "${orchestrator}" == "${DOCKER_COMPOSE_ORCHESTRATOR}" ]]; then
-        docker image inspect "${url}" --format='{{.ID}}' | cut -f2 -d: # let's hope we do not have to preserve the fact that it was sha256:
-    else
-        ctr image ls name=="${url}" | sed -n -e 's/.*sha256:\([a-zA-Z0-9]*\).*/\1/p' # let's hope we do not have to preserve the fact that it was sha256:
-    fi
+	[[ "$url" == "" ]] && {
+		echo none
+		return 0
+	}
+	if [[ "${orchestrator}" == "${DOCKER_COMPOSE_ORCHESTRATOR}" ]]; then
+		docker image inspect "${url}" --format='{{.ID}}' | cut -f2 -d: # let's hope we do not have to preserve the fact that it was sha256:
+	else
+		ctr image ls name=="${url}" | sed -n -e 's/.*sha256:\([a-zA-Z0-9]*\).*/\1/p' # let's hope we do not have to preserve the fact that it was sha256:
+	fi
 }
 
 pull_image() {
-    local -r url="$1"
+	local -r url="$1"
 
-    [[ "$url" == "" ]] && { return 0; }
-    if [[ "${orchestrator}" == "${DOCKER_COMPOSE_ORCHESTRATOR}" ]]; then
-        docker pull "$url" --platform "$platform"
-    else
-        ctr image pull "$url" --platform "$platform"
-    fi
+	[[ "$url" == "" ]] && { return 0; }
+	if [[ "${orchestrator}" == "${DOCKER_COMPOSE_ORCHESTRATOR}" ]]; then
+		docker pull "$url" --platform "$platform"
+	else
+		ctr image pull "$url" --platform "$platform"
+	fi
 }
 
 export_image() {
-    local -r image="$1"
-    local -r output="$2"
+	local -r image="$1"
+	local -r output="$2"
 
-    [[ "$image" == "" ]] && { return 0; }
-    if [[ "${orchestrator}" == "${DOCKER_COMPOSE_ORCHESTRATOR}" ]]; then
-        docker image save "$image" -o "${output}"
-    else
-        ctr image export "${output}" "$image" --platform "$platform"
-    fi
+	[[ "$image" == "" ]] && { return 0; }
+	if [[ "${orchestrator}" == "${DOCKER_COMPOSE_ORCHESTRATOR}" ]]; then
+		docker image save "$image" -o "${output}"
+	else
+		ctr image export "${output}" "$image" --platform "$platform"
+	fi
 }
 
 function parse_parent_child() {
-    local -r root_dir="$1"/parent-child
-    local -A id2parent
-    local -A parent2id
-    local -a ids
-    local -a a
-    local json
-    local i
-    local parentid
-    local id
+	local -r root_dir="$1"/parent-child
+	local -A id2parent
+	local -A parent2id
+	local -a ids
+	local -a a
+	local json
+	local i
+	local parentid
+	local id
 
-    while read -r json; do
-        parentid=$(cat "$json" | jq -r .parent)
-        id=$(dirname "$json")
-        id=$(basename "$id")
-        id2parent[${id}]=${parentid}
-        parent2id[${parentid}]=${id}
-        [[ "$parentid" != "null" ]] && ids+=("${id}")
-    done < <(find "$1" -name json)
+	while read -r json; do
+		parentid=$(cat "$json" | jq -r .parent)
+		id=$(dirname "$json")
+		id=$(basename "$id")
+		id2parent[${id}]=${parentid}
+		parent2id[${parentid}]=${id}
+		[[ "$parentid" != "null" ]] && ids+=("${id}")
+	done < <(find "$1" -name json)
 
-    set +e
-    parentid="${parent2id[null]}"
-    mkdir -p "${root_dir}/${parentid}"
-    i=0
-    while [[ ${#ids[@]} -gt 0 ]]; do
-        id=${ids[${i}]}
-        parentid=${id2parent[${id}]}
-        [[ "$parentid" == "" ]] && { break; }
-        parent_dir=$(find "$root_dir" -name "$parentid" -and -type d)
-        if [[ "$parent_dir" != "" ]]; then
-            mkdir -p "${parent_dir}/${id}"
-            a=("${ids[@]/${id}/}")
-            ids=(${a[@]})
-            i=0
-        else
-            let i++
-            [[ $i -ge ${#ids[@]} ]] && i=0
-        fi
-    done
-    set -e
+	set +e
+	parentid="${parent2id[null]}"
+	mkdir -p "${root_dir}/${parentid}"
+	i=0
+	while [[ ${#ids[@]} -gt 0 ]]; do
+		id=${ids[${i}]}
+		parentid=${id2parent[${id}]}
+		[[ "$parentid" == "" ]] && { break; }
+		parent_dir=$(find "$root_dir" -name "$parentid" -and -type d)
+		if [[ "$parent_dir" != "" ]]; then
+			mkdir -p "${parent_dir}/${id}"
+			a=("${ids[@]/${id}/}")
+			ids=(${a[@]})
+			i=0
+		else
+			let i++
+			[[ $i -ge ${#ids[@]} ]] && i=0
+		fi
+	done
+	set -e
 }
 
 # save the deep-delta modified image into new_dir
 oci_deep_delta() {
-    local -r root_dir="$1"
-    local -r current_dir="$2"
-    local -r new_dir="$3"
-    local i
-    local -a current_layers
-    local -a new_layers
+	local -r root_dir="$1"
+	local -r current_dir="$2"
+	local -r new_dir="$3"
+	local i
+	local -a current_layers
+	local -a new_layers
 
-    # all the layers from current_dir/manifest.json are xdelta3 with layers from new_dir/manifest
-    # the blobs in new_dir are replaced with sha.vcdiff files (same sha file name with vcdiff extension)
-    #  and the sha.current.vcdiff holds the sha fo the layer from current_dir/manifest.json
-    # the remaining items in the new_dir stay
+	# all the layers from current_dir/manifest.json are xdelta3 with layers from new_dir/manifest
+	# the blobs in new_dir are replaced with sha.vcdiff files (same sha file name with vcdiff extension)
+	#  and the sha.current.vcdiff holds the sha fo the layer from current_dir/manifest.json
+	# the remaining items in the new_dir stay
 
-    set +e
-    echo "OCI deep delta generation"
-    # load the current/layers
-    i=0
-    while read -r; do
-        let i++
-        [[ $i -eq 1 ]] && continue
-        [[ "${REPLY[0]}" == "]" ]] && break
-        current_layers+=("$REPLY")
-    done < <(jq -r '.[0].Layers' < "$current_dir"/manifest.json | sed -e 's/,$//' -e 's/^[ ]*//' -e 's/"//g')
-    # load the new/layers
-    i=0
-    while read -r; do
-        let i++
-        [[ $i -eq 1 ]] && continue
-        [[ "${REPLY[0]}" == "]" ]] && break
-        new_layers+=("$REPLY")
-    done < <(jq -r '.[0].Layers' < "$new_dir"/manifest.json | sed -e 's/,$//' -e 's/^[ ]*//' -e 's/"//g')
+	set +e
+	echo "OCI deep delta generation"
+	# load the current/layers
+	i=0
+	while read -r; do
+		let i++
+		[[ $i -eq 1 ]] && continue
+		[[ "${REPLY[0]}" == "]" ]] && break
+		current_layers+=("$REPLY")
+	done < <(jq -r '.[0].Layers' <"$current_dir"/manifest.json | sed -e 's/,$//' -e 's/^[ ]*//' -e 's/"//g')
+	# load the new/layers
+	i=0
+	while read -r; do
+		let i++
+		[[ $i -eq 1 ]] && continue
+		[[ "${REPLY[0]}" == "]" ]] && break
+		new_layers+=("$REPLY")
+	done < <(jq -r '.[0].Layers' <"$new_dir"/manifest.json | sed -e 's/,$//' -e 's/^[ ]*//' -e 's/"//g')
 
-    # if the number of layers in the current image is bigger than the one in the new image
-    # we are unable to create a deep delta (no idea what to do with the extra ones in the current)
-    [[ ${#current_layers[@]} -gt ${#new_layers[@]} ]] && {
-        echo "panic: we cant generate deep-deltas when the source image has more layers that the new one, please try without the deep delta flag"
-        return 1
-    }
+	# if the number of layers in the current image is bigger than the one in the new image
+	# we are unable to create a deep delta (no idea what to do with the extra ones in the current)
+	[[ ${#current_layers[@]} -gt ${#new_layers[@]} ]] && {
+		echo "panic: we cant generate deep-deltas when the source image has more layers that the new one, please try without the deep delta flag"
+		return 1
+	}
 
-    # go through the layers from the current image, generate and save the deltas in the new_dir
-    # we "match" the layer by the index from the Layers manifest array
-    for ((i = 0; i < ${#current_layers[@]}; i++)); do
-        $delta_cmd "${current_dir}/${current_layers[${i}]}" "${new_dir}/${new_layers[${i}]}" "${new_dir}/${new_layers[${i}]}.vcdiff" && rm -fv "${new_dir}/${new_layers[${i}]}"
-        echo "${current_layers[${i}]}" > "${new_dir}/${new_layers[${i}]}.source"
-    done
-    echo "OCI deep delta generation done"
-    set +e
+	# go through the layers from the current image, generate and save the deltas in the new_dir
+	# we "match" the layer by the index from the Layers manifest array
+	for ((i = 0; i < ${#current_layers[@]}; i++)); do
+		$delta_cmd "${current_dir}/${current_layers[${i}]}" "${new_dir}/${new_layers[${i}]}" "${new_dir}/${new_layers[${i}]}.vcdiff" && rm -fv "${new_dir}/${new_layers[${i}]}"
+		echo "${current_layers[${i}]}" >"${new_dir}/${new_layers[${i}]}.source"
+	done
+	echo "OCI deep delta generation done"
+	set +e
 }
 
 # deep_delta "${output_dir}/image-current.img" "${output_dir}/image-new.img" "${output_dir}/image.img"
 deep_delta() {
-    local -r root_dir="$1"
-    local -r current="$2"
-    local -r new="$3"
-    local -r output="$4"
-    local -r current_dir="${root_dir}/current-image"
-    local -r new_dir="${root_dir}/new-image"
-    local -A id2sum_current
-    local -A id2sum_new
-    local sum
-    local sum_current
-    local id
-    local max_level
-    local i
-    local -a current_ids
-    local -a new_ids
-    local -A sum2path_new
-    local -A sum2path_current
-    local tmp_file=$(mktemp)
-    local rc=0
+	local -r root_dir="$1"
+	local -r current="$2"
+	local -r new="$3"
+	local -r output="$4"
+	local -r current_dir="${root_dir}/current-image"
+	local -r new_dir="${root_dir}/new-image"
+	local -A id2sum_current
+	local -A id2sum_new
+	local sum
+	local sum_current
+	local id
+	local max_level
+	local i
+	local -a current_ids
+	local -a new_ids
+	local -A sum2path_new
+	local -A sum2path_current
+	local tmp_file=$(mktemp)
+	local rc=0
 
-    rm -f "$tmp_file"
-    mkdir -p "${current_dir}"
-    mkdir -p "${new_dir}"
-    tar xf "$current" -C "$current_dir" || {
-        echo "ERROR errors unpacking $current"
-        return 1
-    }
-    tar xf "$new" -C "$new_dir" || {
-        echo "ERROR errors unpacking $new"
-        return 1
-    }
+	rm -f "$tmp_file"
+	mkdir -p "${current_dir}"
+	mkdir -p "${new_dir}"
+	tar xf "$current" -C "$current_dir" || {
+		echo "ERROR errors unpacking $current"
+		return 1
+	}
+	tar xf "$new" -C "$new_dir" || {
+		echo "ERROR errors unpacking $new"
+		return 1
+	}
 
-    if [[ -f "$new_dir"/oci-layout && ! -f "$current_dir"/oci-layout ]]; then
-        echo "cant create deep delta between images of different format"
-        return 1
-    fi
-    if [[ ! -f "$new_dir"/oci-layout && -f "$current_dir"/oci-layout ]]; then
-        echo "cant create deep delta between images of different format"
-        return 1
-    fi
+	if [[ -f "$new_dir"/oci-layout && ! -f "$current_dir"/oci-layout ]]; then
+		echo "cant create deep delta between images of different format"
+		return 1
+	fi
+	if [[ ! -f "$new_dir"/oci-layout && -f "$current_dir"/oci-layout ]]; then
+		echo "cant create deep delta between images of different format"
+		return 1
+	fi
 
-    if [[ -f "$new_dir"/oci-layout && -f "$current_dir"/oci-layout ]]; then
-        # save the deep-delta modified image into new_dir
-        oci_deep_delta "$root_dir" "$current_dir" "$new_dir"
-        rc=$?
-        rm -f "$output"
-        tar -cf "$output" -C "$new_dir" .
-        rm -Rf "$current_dir" "$new_dir"
-        return $rc
-    fi
-    parse_parent_child "$current_dir"
-    parse_parent_child "$new_dir"
-    tree "$current_dir"
-    tree "$new_dir"
-    while read -r; do
-        sum=$(sha256sum "$REPLY" | cut -f1 -d' ')
-        id=$(dirname "$REPLY")
-        id=$(basename "$id")
-        id2sum_current[$id]=$sum
-        sum2path_current[$sum]="$REPLY"
-    done < <(find "$current_dir" -name layer.tar)
-    while read -r; do
-        sum=$(sha256sum "$REPLY" | cut -f1 -d' ')
-        echo "sum of $REPLY is $sum"
-        id=$(dirname "$REPLY")
-        id=$(basename "$id")
-        id2sum_new[$id]=$sum
-        sum2path_new[$sum]="$REPLY"
-        echo "sum2path_new saving $sum"
-    done < <(find "$new_dir" -name layer.tar)
-    max_level=$(find "$current_dir" -name layer.tar | wc -l)
-    i=1
-    while [[ $i -le $max_level ]]; do
-        id=$(find "${current_dir}"/parent-child -maxdepth $i -mindepth $i -type d)
-        id=$(basename "${id}")
-        current_ids+=("${id}")
-        id=$(find "${new_dir}"/parent-child -maxdepth $i -mindepth $i -type d)
-        id=$(basename "${id}")
-        new_ids+=("${id}")
-        let i++
-    done
-    for ((i = 0; i < ${max_level}; i++)); do
-        id=${current_ids[${i}]}
-        sum_current=${id2sum_current[${id}]}
-        id=${new_ids[${i}]}
-        sum=${id2sum_new[${id}]}
-        echo "level $i $id $sum $sum_current"
-        if [[ "${sum}" == "${sum_current}" ]]; then
-            echo "      layers match sum:$sum"
-            echo "${sum}" > "${sum2path_new[$sum]}".sha256sum
-            rm -f "${sum2path_new[$sum]}"
-        else
-            echo "      modified layer"
-            echo $delta_cmd "${sum2path_current[$sum_current]}" "${sum2path_new[$sum]}" "$tmp_file"
-            $delta_cmd "${sum2path_current[$sum_current]}" "${sum2path_new[$sum]}" "$tmp_file"
-            mv "$tmp_file" "${sum2path_new[$sum]}".vcdiff
-            echo "${sum_current}" > "${sum2path_new[$sum]}".current.sha256sum
-            echo "${sum}" > "${sum2path_new[$sum]}".new.sha256sum
-            rm -f "${sum2path_new[$sum]}"
-        fi
-    done
-    rm -f "$output"
-    rm -Rf "$current_dir"/parent-child "$new_dir"/parent-child
-    tar -cf "$output" -C "$new_dir" .
-    rm -Rf "$current_dir" "$new_dir"
+	if [[ -f "$new_dir"/oci-layout && -f "$current_dir"/oci-layout ]]; then
+		# save the deep-delta modified image into new_dir
+		oci_deep_delta "$root_dir" "$current_dir" "$new_dir"
+		rc=$?
+		rm -f "$output"
+		tar -cf "$output" -C "$new_dir" .
+		rm -Rf "$current_dir" "$new_dir"
+		return $rc
+	fi
+	parse_parent_child "$current_dir"
+	parse_parent_child "$new_dir"
+	tree "$current_dir"
+	tree "$new_dir"
+	while read -r; do
+		sum=$(sha256sum "$REPLY" | cut -f1 -d' ')
+		id=$(dirname "$REPLY")
+		id=$(basename "$id")
+		id2sum_current[$id]=$sum
+		sum2path_current[$sum]="$REPLY"
+	done < <(find "$current_dir" -name layer.tar)
+	while read -r; do
+		sum=$(sha256sum "$REPLY" | cut -f1 -d' ')
+		echo "sum of $REPLY is $sum"
+		id=$(dirname "$REPLY")
+		id=$(basename "$id")
+		id2sum_new[$id]=$sum
+		sum2path_new[$sum]="$REPLY"
+		echo "sum2path_new saving $sum"
+	done < <(find "$new_dir" -name layer.tar)
+	max_level=$(find "$current_dir" -name layer.tar | wc -l)
+	i=1
+	while [[ $i -le $max_level ]]; do
+		id=$(find "${current_dir}"/parent-child -maxdepth $i -mindepth $i -type d)
+		id=$(basename "${id}")
+		current_ids+=("${id}")
+		id=$(find "${new_dir}"/parent-child -maxdepth $i -mindepth $i -type d)
+		id=$(basename "${id}")
+		new_ids+=("${id}")
+		let i++
+	done
+	for ((i = 0; i < ${max_level}; i++)); do
+		id=${current_ids[${i}]}
+		sum_current=${id2sum_current[${id}]}
+		id=${new_ids[${i}]}
+		sum=${id2sum_new[${id}]}
+		echo "level $i $id $sum $sum_current"
+		if [[ "${sum}" == "${sum_current}" ]]; then
+			echo "      layers match sum:$sum"
+			echo "${sum}" >"${sum2path_new[$sum]}".sha256sum
+			rm -f "${sum2path_new[$sum]}"
+		else
+			echo "      modified layer"
+			echo $delta_cmd "${sum2path_current[$sum_current]}" "${sum2path_new[$sum]}" "$tmp_file"
+			$delta_cmd "${sum2path_current[$sum_current]}" "${sum2path_new[$sum]}" "$tmp_file"
+			mv "$tmp_file" "${sum2path_new[$sum]}".vcdiff
+			echo "${sum_current}" >"${sum2path_new[$sum]}".current.sha256sum
+			echo "${sum}" >"${sum2path_new[$sum]}".new.sha256sum
+			rm -f "${sum2path_new[$sum]}"
+		fi
+	done
+	rm -f "$output"
+	rm -Rf "$current_dir"/parent-child "$new_dir"/parent-child
+	tar -cf "$output" -C "$new_dir" .
+	rm -Rf "$current_dir" "$new_dir"
 }
 
 prepare_images() {
-    local -r root_dir="$1"
-    local i
-    local j
-    local url_current
-    local url_new
-    local output_dir
-    local services
+	local -r root_dir="$1"
+	local i
+	local j
+	local url_current
+	local url_new
+	local output_dir
+	local services
 
-    # Extract services from the Docker Compose file
-    services=$(docker compose --project-directory "$manifests_dir" config --services)
+	# Extract services from the Docker Compose file
+	services=$(docker compose --project-directory "$manifests_dir" config --services)
 
-    for service in $services; do
-        # Convert Docker Compose config to JSON
-        config_json=$(docker compose --project-directory "$manifests_dir" config | yq eval -o=json)
-        
-        # Check if the service has a build context
-        build_context=$(echo "$config_json" | jq -r ".services.\"$service\".build.context // empty")
-        
-        if [ -n "$build_context" ]; then
-            echo "Building Images from Project"
-            # Build the image locally using Docker Compose
-            docker compose --project-directory "$manifests_dir" build "$service"
-            image_name=$(echo "$config_json" | jq -r ".services.\"$service\".image")
-            images+=("$image_name")
-            images+=("$image_name")
-        else
-            echo "Pulling Images from Directory"
-            # Get the image name from the Docker Compose file
-            image_name=$(echo "$config_json" | jq -r ".services.\"$service\".image")
-            images+=("$image_name")
-            images+=("$image_name")
-            # Pull the image from the registry
-            pull_image "$image_name"
-        fi
-        
-        # images_shas+=($(get_image_sha "$image_name"))
-    done
+	for service in $services; do
+		# Convert Docker Compose config to JSON
+		config_json=$(docker compose --project-directory "$manifests_dir" config | yq eval -o=json)
 
-    for ((i = 0; i < ${#images[@]}; i++)); do
-        images_shas+=($(get_image_sha "${images[${i}]}"))
-    done
+		# Check if the service has a build context
+		build_context=$(echo "$config_json" | jq -r ".services.\"$service\".build.context // empty")
 
-    declare -p images_shas
+		if [ -n "$build_context" ]; then
+			echo "Building Images from Project"
+			# Build the image locally using Docker Compose
+			docker compose --project-directory "$manifests_dir" build "$service"
+			image_name=$(echo "$config_json" | jq -r ".services.\"$service\".image")
+			images+=("$image_name")
+			images+=("$image_name")
+		else
+			echo "Pulling Images from Directory"
+			# Get the image name from the Docker Compose file
+			image_name=$(echo "$config_json" | jq -r ".services.\"$service\".image")
+			images+=("$image_name")
+			images+=("$image_name")
+			# Pull the image from the registry
+			pull_image "$image_name"
+		fi
 
-    for ((i = 0; i < ${#images[@]}; i += 2)); do
-        j=$((i + 1))
-        url_current=${images[${i}]}
-        url_new=${images[${j}]}
-        output_dir="${root_dir}/${images_shas[${j}]}"
-        [[ -d "$output_dir" ]] || mkdir "$output_dir"
-        echo "${url_new}" > "${output_dir}/url-new.txt"
-        echo "${url_current}" > "${output_dir}/url-current.txt"
-        echo "${images_shas[${i}]}" > "${output_dir}/sums-current.txt"
-        echo "${images_shas[${j}]}" >> "${output_dir}/sums-new.txt"
-        if [[ "${url_current}" == "${url_new}" ]]; then
-            export_image "$url_new" "${output_dir}/image.img"
-        else
-            export_image "$url_new" "${output_dir}/image-new.img"
-            export_image "$url_current" "${output_dir}/image-current.img"
-            if ! check_dependency xdelta3; then
-                echo "For delta artifacts xdelta3 is required" >&2
-                exit 1
-            fi
-            if [[ ${deep_delta} == true ]]; then
-                deep_delta "${root_dir}" "${output_dir}/image-current.img" "${output_dir}/image-new.img" "${output_dir}/image.img"
-                touch "${output_dir}"/deep_delta
-            else
-                $delta_cmd "${output_dir}/image-current.img" "${output_dir}/image-new.img" "${output_dir}/image.img"
-            fi
-            rm -f "${output_dir}/image-new.img" "${output_dir}/image-current.img"
-        fi
-    done
+		# images_shas+=($(get_image_sha "$image_name"))
+	done
+
+	for ((i = 0; i < ${#images[@]}; i++)); do
+		images_shas+=($(get_image_sha "${images[${i}]}"))
+	done
+
+	declare -p images_shas
+
+	for ((i = 0; i < ${#images[@]}; i += 2)); do
+		j=$((i + 1))
+		url_current=${images[${i}]}
+		url_new=${images[${j}]}
+		output_dir="${root_dir}/${images_shas[${j}]}"
+		[[ -d "$output_dir" ]] || mkdir "$output_dir"
+		echo "${url_new}" >"${output_dir}/url-new.txt"
+		echo "${url_current}" >"${output_dir}/url-current.txt"
+		echo "${images_shas[${i}]}" >"${output_dir}/sums-current.txt"
+		echo "${images_shas[${j}]}" >>"${output_dir}/sums-new.txt"
+		if [[ "${url_current}" == "${url_new}" ]]; then
+			export_image "$url_new" "${output_dir}/image.img"
+		else
+			export_image "$url_new" "${output_dir}/image-new.img"
+			export_image "$url_current" "${output_dir}/image-current.img"
+			if ! check_dependency xdelta3; then
+				echo "For delta artifacts xdelta3 is required" >&2
+				exit 1
+			fi
+			if [[ ${deep_delta} == true ]]; then
+				deep_delta "${root_dir}" "${output_dir}/image-current.img" "${output_dir}/image-new.img" "${output_dir}/image.img"
+				touch "${output_dir}"/deep_delta
+			else
+				$delta_cmd "${output_dir}/image-current.img" "${output_dir}/image-new.img" "${output_dir}/image.img"
+			fi
+			rm -f "${output_dir}/image-new.img" "${output_dir}/image-current.img"
+		fi
+	done
 }
 
 generate_metadata() {
-    local -r output="$1"
-    local sha
-    local -a shas
+	local -r output="$1"
+	local sha
+	local -a shas
 
-    echo -ne "{" > "${output}"
-    echo -ne '"application_name":' >> "${output}"
-    printf '"%s",' "$application_name" >> "${output}"
-    echo -ne '"orchestrator":' >> "${output}"
-    printf '"%s",' "$orchestrator" >> "${output}"
-    echo -ne '"platform":' >> "${output}"
-    printf '"%s",' "$platform" >> "${output}"
-    echo -ne '"version":' >> "${output}"
-    printf '"%s",' "$version" >> "${output}"
-    echo -ne '"images":[' >> "${output}"
-    for sha in $(echo "${images_shas[@]}" | tr ' ' '\n' | sort | uniq); do
-        shas+=($sha)
-    done
-    for ((i = 0; i < ${#shas[@]}; i++)); do
-        printf '"%s"' "${shas[${i}]}" >> "${output}"
-        [[ $((i + 1)) -lt ${#shas[@]} ]] && echo -ne "," >> "${output}"
-    done
-    echo -ne ']' >> "${output}"
-    if [[ "${k8s_ctr_address}" != "" || "${k8s_namespace}" != "" ]]; then
-        echo -ne ',"env":{' >> "${output}"
-        echo -ne "\"K8S_CTR_ADDRESS\":\"${k8s_ctr_address}\"," >> "${output}"
-        echo -ne "\"K8S_NAMESPACE\":\"${k8s_namespace}\"" >> "${output}"
-        echo -ne '}' >> "${output}"
-    fi
-    echo -ne "}" >> "${output}"
-    echo "saving metadata:"
-    echo "--"
-    cat "${output}"
-    echo
-    echo "--"
+	echo -ne "{" >"${output}"
+	echo -ne '"application_name":' >>"${output}"
+	printf '"%s",' "$application_name" >>"${output}"
+	echo -ne '"orchestrator":' >>"${output}"
+	printf '"%s",' "$orchestrator" >>"${output}"
+	echo -ne '"platform":' >>"${output}"
+	printf '"%s",' "$platform" >>"${output}"
+	echo -ne '"version":' >>"${output}"
+	printf '"%s",' "$version" >>"${output}"
+	echo -ne '"images":[' >>"${output}"
+	for sha in $(echo "${images_shas[@]}" | tr ' ' '\n' | sort | uniq); do
+		shas+=($sha)
+	done
+	for ((i = 0; i < ${#shas[@]}; i++)); do
+		printf '"%s"' "${shas[${i}]}" >>"${output}"
+		[[ $((i + 1)) -lt ${#shas[@]} ]] && echo -ne "," >>"${output}"
+	done
+	echo -ne ']' >>"${output}"
+	if [[ "${k8s_ctr_address}" != "" || "${k8s_namespace}" != "" ]]; then
+		echo -ne ',"env":{' >>"${output}"
+		echo -ne "\"K8S_CTR_ADDRESS\":\"${k8s_ctr_address}\"," >>"${output}"
+		echo -ne "\"K8S_NAMESPACE\":\"${k8s_namespace}\"" >>"${output}"
+		echo -ne '}' >>"${output}"
+	fi
+	echo -ne "}" >>"${output}"
+	echo "saving metadata:"
+	echo "--"
+	cat "${output}"
+	echo
+	echo "--"
 }
 
 prepare_images "${temp_dir}/images"
-( cd "${temp_dir}" && tar czvf images.tar.gz images  )
+(cd "${temp_dir}" && tar czvf images.tar.gz images)
 mkdir "${temp_dir}/manifests"
 cp -a "${manifests_dir}/docker-compose.yml" "${temp_dir}/manifests/docker-compose.yml"
-( cd "${temp_dir}" && tar czvf "manifests.tar.gz" manifests  )
+(cd "${temp_dir}" && tar czvf "manifests.tar.gz" manifests)
 generate_metadata "${temp_dir}/metadata.json"
 
 mender-artifact write module-image \
-    -T app \
-    "${device_types[@]}" \
-    -o "$output_path" \
-    -n "$artifact_name" \
-    --meta-data "${temp_dir}/metadata.json" \
-    -f "${temp_dir}/images.tar.gz" \
-    -f "${temp_dir}/manifests.tar.gz" \
-    --software-name "$application_name" \
-    $passthrough_args
+	-T app \
+	"${device_types[@]}" \
+	-o "$output_path" \
+	-n "$artifact_name" \
+	--meta-data "${temp_dir}/metadata.json" \
+	-f "${temp_dir}/images.tar.gz" \
+	-f "${temp_dir}/manifests.tar.gz" \
+	--software-name "$application_name" \
+	$passthrough_args
 
 echo "Artifact $output_path generated successfully:"
 mender-artifact read "$output_path"
