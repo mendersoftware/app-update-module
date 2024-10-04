@@ -11,7 +11,7 @@ services:
             - /bin/sleep
             - "65536"
     db:
-        image: docker.io/library/memcached:1.6.18-alpine
+        image: docker.io/library/memcached:1.6.18
         networks:
             - local_net
         environment:
