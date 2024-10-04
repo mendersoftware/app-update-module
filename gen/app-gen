@@ -489,9 +489,35 @@ prepare_images() {
     local url_current
     local url_new
     local output_dir
+    local services
+
+    # Extract services from the Docker Compose file
+    services=$(docker compose --project-directory "$manifests_dir" config --services)
+    for service in $services; do
+        # Convert Docker Compose config to JSON
+        config_json=$(docker compose --project-directory "$manifests_dir" config | yq eval -o=json)
+        # Check if the service has a build context
+        build_context=$(echo "$config_json" | jq -r ".services.\"$service\".build.context // empty")
+        if [ -n "$build_context" ]; then
+            echo "Building Images from Project"
+            # Build the image locally using Docker Compose
+            docker compose --project-directory "$manifests_dir" build "$service"
+            image_name=$(echo "$config_json" | jq -r ".services.\"$service\".image")
+            images+=("$image_name")
+            images+=("$image_name")
+        else
+            echo "Pulling Images from Directory"
+            # Get the image name from the Docker Compose file
+            image_name=$(echo "$config_json" | jq -r ".services.\"$service\".image")
+            images+=("$image_name")
+            images+=("$image_name")
+            # Pull the image from the registry
+            pull_image "$image_name"
+        fi
+        # images_shas+=($(get_image_sha "$image_name"))
+    done
 
     for ((i = 0; i < ${#images[@]}; i++)); do
-        pull_image "${images[${i}]}"
         images_shas+=($(get_image_sha "${images[${i}]}"))
     done
     declare -p images_shas
@@ -565,7 +591,13 @@ generate_metadata() {
 
 prepare_images "${temp_dir}/images"
 ( cd "${temp_dir}" && tar czvf images.tar.gz images  )
-cp -a "${manifests_dir}" "${temp_dir}/manifests"
+mkdir "${temp_dir}/manifests"
+for file in "${manifests_dir}/docker-compose.{yaml,yml}"; do
+    if [ -e "$file" ]; then
+        cp -a "$file" "${temp_dir}/manifests/docker-compose.yaml"
+        break  # Exit the loop after copying the first found file
+    fi
+done
 ( cd "${temp_dir}" && tar czvf "manifests.tar.gz" manifests  )
 generate_metadata "${temp_dir}/metadata.json"
 
