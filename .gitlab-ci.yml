@@ -108,6 +108,9 @@ test:acceptancetests:
     - curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
     - chmod +x ./kubectl
     - mv ./kubectl /usr/bin/kubectl
+    - wget https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64 -O yq
+    - chmod +x yq
+    - mv yq /usr/local/bin
 
   script:
     - ./acceptance-tests/run.sh

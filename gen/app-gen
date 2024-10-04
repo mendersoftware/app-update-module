@@ -496,7 +496,7 @@ prepare_images() {
 
 	for service in $services; do
 		# Convert Docker Compose config to JSON
-		config_json=$(docker compose --project-directory "$manifests_dir" config | yq eval -o=json)
+		config_json=$(docker compose --project-directory "$manifests_dir" config | yq eval -j -)
 
 		# Check if the service has a build context
 		build_context=$(echo "$config_json" | jq -r ".services.\"$service\".build.context // empty")
