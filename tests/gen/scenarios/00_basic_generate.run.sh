@@ -30,7 +30,7 @@ artifact_name=$(basename "$temp_dir")
 # for the test purposes we will get the shasums of both images,
 # and save them in the expected metadata file
 image1=docker.io/library/alpine:3.14
-image2=docker.io/library/memcached:1.6.18-alpine
+image2=docker.io/library/memcached:1.6.18
 docker pull "${image1}"
 docker pull "${image2}"
 sha1=$(docker inspect "${image1}" --format '{{.Id}}' | cut -f2 -d:)
