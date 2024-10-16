@@ -219,7 +219,7 @@ handle_artifact() {
     done
     # we should check if the app is healthy and alive, then decide what to do
     # at the moment we assume it is alive and ok
-    if test -d "${PERSISTENT_STORE}/${application_name}-previous"; then
+    if test -d "${PERSISTENT_STORE}/${application_name}-previous/manifests"; then
         echo "stopping ${PERSISTENT_STORE}/${application_name}-previous/manifests"
         $app_sub_module STOP "${application_name}" "${PERSISTENT_STORE}/${application_name}-previous/manifests"
     else
