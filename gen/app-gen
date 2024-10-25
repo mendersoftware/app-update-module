@@ -34,6 +34,7 @@ Usage: $0 [options] [-- [options-for-mender-artifact] ]
         --output-path       - Path to output artifact file. Default: reboot-artifact.mender
         --image [current-url,]new-url       - Path to output artifact file. Default: reboot-artifact.mender
         --deep-delta        - Calculate delta by parsing the image
+        --skip-images       - Skip including images in artifact
         --manifests-dir     - Directory containing orchestrator-specific manifests describing the deployment
         --platform          - Platform of the images, e.g.: linux/arm/v7
         --orchestrator      - Name of the orchestrator, and name of the sub-module, e.g.: docker-compose
@@ -78,6 +79,7 @@ manifests_dir=""
 declare -a images=()
 declare -a images_shas=()
 deep_delta=false
+skip_images=false
 
 set +u
 while test $# -gt 0; do
@@ -137,6 +139,10 @@ while test $# -gt 0; do
             images+=($(echo "$2" | cut -f1 -d,)) # current
             images+=($(echo "$2" | cut -f2 -d,)) # new, if current!=new then we need to generate delta.
             shift 2
+            ;;
+        --skip-images | -d)
+            skip_images=true
+            shift 1
             ;;
         --deep-delta | -d)
             deep_delta=true
@@ -209,21 +215,25 @@ if [ -z "${manifests_dir}" ]; then
 fi
 
 if [ ${#images[@]} -lt 1 ]; then
-    if [[ "${orchestrator}" == "${DOCKER_COMPOSE_ORCHESTRATOR}" ]]; then
-        echo "No specific images specified. Will try to extract from docker-compose.yaml file." >&2
+    if [ "$skip_images" == "true" ]; then
+        echo "Skiping including images in artifact"
+    else
+        if [[ "${orchestrator}" == "${DOCKER_COMPOSE_ORCHESTRATOR}" ]]; then
+            echo "No specific images specified. Will try to extract from docker-compose.yaml file." >&2
 
-        while read -r img; do
-            images+=("$img")
-            images+=("$img")
-        done < <( docker compose --project-directory "$manifests_dir" config --images)
+            while read -r img; do
+                images+=("$img")
+                images+=("$img")
+            done < <( docker compose --project-directory "$manifests_dir" config --images)
 
-        if [ ${#images[@]} -lt 1 ]; then
-            echo "Image extraction from docker-compose.yaml failed. Aborting." >&2
+            if [ ${#images[@]} -lt 1 ]; then
+                echo "Image extraction from docker-compose.yaml failed. Aborting." >&2
+                show_help_and_exit_error
+            fi
+        else
+            echo "No images specified. Aborting." >&2
             show_help_and_exit_error
         fi
-    else
-        echo "No images specified. Aborting." >&2
-        show_help_and_exit_error
     fi
 fi
 
@@ -237,7 +247,9 @@ temp_dir="$(mktemp -d)"
     echo "cant get the temporary directory" >&2
     show_help_and_exit_error
 }
-mkdir "${temp_dir}/images"
+if [ "$skip_images" == "false" ]; then
+    mkdir "${temp_dir}/images"
+fi
 
 function cleanup() {
     rm -Rf "$temp_dir"
@@ -539,16 +551,18 @@ generate_metadata() {
     echo -ne '"platform":' >> "${output}"
     printf '"%s",' "$platform" >> "${output}"
     echo -ne '"version":' >> "${output}"
-    printf '"%s",' "$version" >> "${output}"
-    echo -ne '"images":[' >> "${output}"
-    for sha in $(echo "${images_shas[@]}" | tr ' ' '\n' | sort | uniq); do
-        shas+=($sha)
-    done
-    for ((i = 0; i < ${#shas[@]}; i++)); do
-        printf '"%s"' "${shas[${i}]}" >> "${output}"
-        [[ $((i + 1)) -lt ${#shas[@]} ]] && echo -ne "," >> "${output}"
-    done
-    echo -ne ']' >> "${output}"
+    printf '"%s"' "$version" >> "${output}"
+    if [ "$skip_images" == "false" ]; then
+        echo -ne ', "images":[' >> "${output}"
+        for sha in $(echo "${images_shas[@]}" | tr ' ' '\n' | sort | uniq); do
+            shas+=($sha)
+        done
+        for ((i = 0; i < ${#shas[@]}; i++)); do
+            printf '"%s"' "${shas[${i}]}" >> "${output}"
+            [[ $((i + 1)) -lt ${#shas[@]} ]] && echo -ne "," >> "${output}"
+        done
+        echo -ne ']' >> "${output}"
+    fi
     if [[ "${k8s_ctr_address}" != "" || "${k8s_namespace}" != "" ]]; then
         echo -ne ',"env":{' >> "${output}"
         echo -ne "\"K8S_CTR_ADDRESS\":\"${k8s_ctr_address}\"," >> "${output}"
@@ -563,22 +577,38 @@ generate_metadata() {
     echo "--"
 }
 
-prepare_images "${temp_dir}/images"
-( cd "${temp_dir}" && tar czvf images.tar.gz images  )
+if [ "$skip_images" == "false" ]; then
+    prepare_images "${temp_dir}/images"
+    ( cd "${temp_dir}" && tar czvf images.tar.gz images  )
+fi
 cp -a "${manifests_dir}" "${temp_dir}/manifests"
 ( cd "${temp_dir}" && tar czvf "manifests.tar.gz" manifests  )
 generate_metadata "${temp_dir}/metadata.json"
 
-mender-artifact write module-image \
-    -T app \
-    "${device_types[@]}" \
-    -o "$output_path" \
-    -n "$artifact_name" \
-    --meta-data "${temp_dir}/metadata.json" \
-    -f "${temp_dir}/images.tar.gz" \
-    -f "${temp_dir}/manifests.tar.gz" \
-    --software-name "$application_name" \
-    $passthrough_args
+
+if [ "$skip_images" == "false" ]; then
+    mender-artifact write module-image \
+        -T app \
+        "${device_types[@]}" \
+        -o "$output_path" \
+        -n "$artifact_name" \
+        --meta-data "${temp_dir}/metadata.json" \
+        -f "${temp_dir}/images.tar.gz" \
+        -f "${temp_dir}/manifests.tar.gz" \
+        --software-name "$application_name" \
+        $passthrough_args
+else
+    mender-artifact write module-image \
+        -T app \
+        "${device_types[@]}" \
+        -o "$output_path" \
+        -n "$artifact_name" \
+        --meta-data "${temp_dir}/metadata.json" \
+        -f "${temp_dir}/manifests.tar.gz" \
+        --software-name "$application_name" \
+        $passthrough_args
+fi
+
 
 echo "Artifact $output_path generated successfully:"
 mender-artifact read "$output_path"
