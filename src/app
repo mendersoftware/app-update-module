@@ -38,6 +38,7 @@ app_sub_module=""
 artifact_name=""
 application_name=""
 options=""
+images_urls=()
 
 if test -f "$CONFIG_FILE"; then
     . "$CONFIG_FILE"
@@ -82,6 +83,7 @@ parse_metadata() {
     platform=$(jq -r .platform < "$1")
     export MENDER_APP_UPDATE_MODULE_PLATFORM="$platform"
     orchestrator=$(jq -r .orchestrator < "$1")
+    images_urls=($(jq -r '.images_urls[]?' < "$1"))
     version=$(jq -r .version < "$1")
     app_sub_module="${APP_MODULE_DIR}/${orchestrator}"
     if test ! -f "${app_sub_module}"; then
@@ -225,6 +227,10 @@ handle_artifact() {
             # we save the image urls and shasums in order to be able to clean up
             echo "${url_new}" >> "${PERSISTENT_STORE}/${application_name}"/images/urls
             echo "${sha_new}" >> "${PERSISTENT_STORE}/${application_name}"/images/shas
+        done
+    else
+        for ((i = 0; i < ${#images_urls[@]}; i++)); do
+            echo "${images_urls[${i}]}" >> "${PERSISTENT_STORE}/${application_name}"/images/urls
         done
     fi
     # we should check if the app is healthy and alive, then decide what to do
