@@ -70,7 +70,7 @@ declare -a device_types
 artifact_name=""
 output_path="app-artifact.mender"
 passthrough_args=""
-version="1.0"
+version="1.1.dev"
 orchestrator=""
 k8s_ctr_address=""
 k8s_namespace=""
@@ -215,25 +215,21 @@ if [ -z "${manifests_dir}" ]; then
 fi
 
 if [ ${#images[@]} -lt 1 ]; then
-    if [ "$skip_images" == "true" ]; then
-        echo "Skiping including images in artifact"
-    else
-        if [[ "${orchestrator}" == "${DOCKER_COMPOSE_ORCHESTRATOR}" ]]; then
-            echo "No specific images specified. Will try to extract from docker-compose.yaml file." >&2
+    if [[ "${orchestrator}" == "${DOCKER_COMPOSE_ORCHESTRATOR}" ]]; then
+        echo "No specific images specified. Will try to extract from docker-compose.yaml file." >&2
 
-            while read -r img; do
-                images+=("$img")
-                images+=("$img")
-            done < <( docker compose --project-directory "$manifests_dir" config --images)
+        while read -r img; do
+            images+=("$img")
+            images+=("$img")
+        done < <( docker compose --project-directory "$manifests_dir" config --images)
 
-            if [ ${#images[@]} -lt 1 ]; then
-                echo "Image extraction from docker-compose.yaml failed. Aborting." >&2
-                show_help_and_exit_error
-            fi
-        else
-            echo "No images specified. Aborting." >&2
+        if [ ${#images[@]} -lt 1 ]; then
+            echo "Image extraction from docker-compose.yaml failed. Aborting." >&2
             show_help_and_exit_error
         fi
+    else
+        echo "No images specified. Aborting." >&2
+        show_help_and_exit_error
     fi
 fi
 
@@ -542,6 +538,8 @@ generate_metadata() {
     local -r output="$1"
     local sha
     local -a shas
+    local url
+    local -a urls
 
     echo -ne "{" > "${output}"
     echo -ne '"application_name":' >> "${output}"
@@ -560,6 +558,16 @@ generate_metadata() {
         for ((i = 0; i < ${#shas[@]}; i++)); do
             printf '"%s"' "${shas[${i}]}" >> "${output}"
             [[ $((i + 1)) -lt ${#shas[@]} ]] && echo -ne "," >> "${output}"
+        done
+        echo -ne ']' >> "${output}"
+    else
+        for url in $(echo "${images[@]}" | tr ' ' '\n' | sort | uniq); do
+            urls+=($url)
+        done
+        echo -ne ', "images_urls": [' >> "${output}"
+        for ((i = 0; i < ${#urls[@]}; i++)); do
+            printf '"%s"' "${urls[${i}]}" >> "${output}"
+            [[ $((i + 1)) -lt ${#urls[@]} ]] && echo -ne "," >> "${output}"
         done
         echo -ne ']' >> "${output}"
     fi
