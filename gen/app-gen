@@ -593,29 +593,16 @@ cp -a "${manifests_dir}" "${temp_dir}/manifests"
 ( cd "${temp_dir}" && tar czvf "manifests.tar.gz" manifests  )
 generate_metadata "${temp_dir}/metadata.json"
 
-
-if [ "$skip_images" == "false" ]; then
-    mender-artifact write module-image \
-        -T app \
-        "${device_types[@]}" \
-        -o "$output_path" \
-        -n "$artifact_name" \
-        --meta-data "${temp_dir}/metadata.json" \
-        -f "${temp_dir}/images.tar.gz" \
-        -f "${temp_dir}/manifests.tar.gz" \
-        --software-name "$application_name" \
-        $passthrough_args
-else
-    mender-artifact write module-image \
-        -T app \
-        "${device_types[@]}" \
-        -o "$output_path" \
-        -n "$artifact_name" \
-        --meta-data "${temp_dir}/metadata.json" \
-        -f "${temp_dir}/manifests.tar.gz" \
-        --software-name "$application_name" \
-        $passthrough_args
-fi
+mender-artifact write module-image \
+    -T app \
+    "${device_types[@]}" \
+    -o "$output_path" \
+    -n "$artifact_name" \
+    --meta-data "${temp_dir}/metadata.json" \
+    -f "${temp_dir}/manifests.tar.gz" \
+    $( [ "$skip_images" == "false" ] && echo "-f ${temp_dir}/images.tar.gz" ) \
+    --software-name "$application_name" \
+    $passthrough_args
 
 
 echo "Artifact $output_path generated successfully:"
