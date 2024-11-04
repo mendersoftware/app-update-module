@@ -70,7 +70,7 @@ declare -a device_types
 artifact_name=""
 output_path="app-artifact.mender"
 passthrough_args=""
-version="1.1.dev"
+version="1.0"
 orchestrator=""
 k8s_ctr_address=""
 k8s_namespace=""
