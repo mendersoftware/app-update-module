@@ -38,7 +38,7 @@ app_sub_module=""
 artifact_name=""
 application_name=""
 options=""
-images_urls=()
+images_urls=""
 
 if test -f "$CONFIG_FILE"; then
     . "$CONFIG_FILE"
