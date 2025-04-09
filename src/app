@@ -145,54 +145,62 @@ handle_artifact() {
     local deep_delta
     local rollback_id="last"
     local rc=0
+    local skip_images="false"
 
     if test ! -d "$temp_dir"; then
         echo "ERROR: temp_dir does not exist"
         return 1
     fi
 
-    echo "decompressing images"
-    $tar_decompress_cmd "$1"/images.tar.gz -C "$temp_dir"
+    if test -f "$1"/images.tar.gz; then
+        echo "decompressing images"
+        $tar_decompress_cmd "$1"/images.tar.gz -C "$temp_dir"
+    else
+        skip_images="true"
+    fi
+
     echo "decompressing manifests"
     $tar_decompress_cmd "$1"/manifests.tar.gz -C "$temp_dir"
 
-    echo "unpacking images"
-    for image_dir in "${temp_dir}/images/"*; do
-        echo "unpacking $image_dir"
-        url_new=$(cat "${image_dir}/url-new.txt")
-        url_current=$(cat "${image_dir}/url-current.txt")
-        sha_new=$(cat "${image_dir}/sums-new.txt")
-        sha_current=$(cat "${image_dir}/sums-current.txt")
-        if test "$url_new" = ""; then
-            echo "ERROR: payload ${image_dir}/url-new.txt cannot be empty"
-            return 1
-        fi
-        if test "$sha_new" = ""; then
-            echo "ERROR: sha_new cannot be empty"
-            return 1
-        fi
+    if test "${skip_images}" = "false"; then
+        echo "unpacking images"
+        for image_dir in "${temp_dir}/images/"*; do
+            echo "unpacking $image_dir"
+            url_new=$(cat "${image_dir}/url-new.txt")
+            url_current=$(cat "${image_dir}/url-current.txt")
+            sha_new=$(cat "${image_dir}/sums-new.txt")
+            sha_current=$(cat "${image_dir}/sums-current.txt")
+            if test "$url_new" = ""; then
+                echo "ERROR: payload ${image_dir}/url-new.txt cannot be empty"
+                return 1
+            fi
+            if test "$sha_new" = ""; then
+                echo "ERROR: sha_new cannot be empty"
+                return 1
+            fi
 
-        if test "$url_new" != "$url_current"; then
-            if test "$url_current" = ""; then
-                echo "ERROR: url_current cannot be empty"
-                return 1
+            if test "$url_new" != "$url_current"; then
+                if test "$url_current" = ""; then
+                    echo "ERROR: url_current cannot be empty"
+                    return 1
+                fi
+                if test "$sha_current" = ""; then
+                    echo "ERROR: sha_ccurrent cannot be empty"
+                    return 1
+                fi
+                if test ! -f "${image_dir}/deep_delta"; then
+                    # deep-delta means that the binary delta was generated at the layers level,
+                    # and the orchestrators submodule will deal with decoding during the LOAD below
+                    # ref. to LOAD implementations
+                    image_current="${temp_dir}/current.${sha_current}.img"
+                    image_new="${temp_dir}/new.${sha_new}.img"
+                    $app_sub_module SAVE "${application_name}" "$url_current" "$image_current"
+                    $delta_cmd "$image_current" "${image_dir}/image.img" "${image_new}"
+                    mv -v "${image_new}" "${image_dir}/image.img"
+                fi
             fi
-            if test "$sha_current" = ""; then
-                echo "ERROR: sha_ccurrent cannot be empty"
-                return 1
-            fi
-            if test ! -f "${image_dir}/deep_delta"; then
-                # deep-delta means that the binary delta was generated at the layers level,
-                # and the orchestrators submodule will deal with decoding during the LOAD below
-                # ref. to LOAD implementations
-                image_current="${temp_dir}/current.${sha_current}.img"
-                image_new="${temp_dir}/new.${sha_new}.img"
-                $app_sub_module SAVE "${application_name}" "$url_current" "$image_current"
-                $delta_cmd "$image_current" "${image_dir}/image.img" "${image_new}"
-                mv -v "${image_new}" "${image_dir}/image.img"
-            fi
-        fi
-    done
+        done
+    fi
     if test -d "${PERSISTENT_STORE}/${application_name}"; then
         echo "copying existing composition to -previous"
         rm -Rf "${PERSISTENT_STORE}/${application_name}-previous"
@@ -202,21 +210,27 @@ handle_artifact() {
     fi
     mkdir -pv "${PERSISTENT_STORE}/${application_name}"/images
     rm -vf "${PERSISTENT_STORE}/${application_name}"/images/*
-    for image_dir in "${temp_dir}/images/"*; do
-        echo "scanning ${image_dir}"
-        url_current=$(cat "${image_dir}/url-current.txt")
-        url_new=$(cat "${image_dir}/url-new.txt")
-        sha_new=$(cat "${image_dir}/sums-new.txt")
-        deep_delta=""
-        if test -f "${image_dir}/deep_delta"; then
-            deep_delta=deep_delta
-        fi
-        MODULE_TMPDIR="${temp_dir}" OPTIONS="${deep_delta}" $app_sub_module LOAD "${application_name}" "${url_new}" "${image_dir}/image.img" "${url_current}"
-        # and the sub module deals with proper image loading
-        # we save the image urls and shasums in order to be able to clean up
-        echo "${url_new}" >> "${PERSISTENT_STORE}/${application_name}"/images/urls
-        echo "${sha_new}" >> "${PERSISTENT_STORE}/${application_name}"/images/shas
-    done
+    if test "${skip_images}" = "false"; then
+        for image_dir in "${temp_dir}/images/"*; do
+            echo "scanning ${image_dir}"
+            url_current=$(cat "${image_dir}/url-current.txt")
+            url_new=$(cat "${image_dir}/url-new.txt")
+            sha_new=$(cat "${image_dir}/sums-new.txt")
+            deep_delta=""
+            if test -f "${image_dir}/deep_delta"; then
+                deep_delta=deep_delta
+            fi
+            MODULE_TMPDIR="${temp_dir}" OPTIONS="${deep_delta}" $app_sub_module LOAD "${application_name}" "${url_new}" "${image_dir}/image.img" "${url_current}"
+            # and the sub module deals with proper image loading
+            # we save the image urls and shasums in order to be able to clean up
+            echo "${url_new}" >> "${PERSISTENT_STORE}/${application_name}"/images/urls
+            echo "${sha_new}" >> "${PERSISTENT_STORE}/${application_name}"/images/shas
+        done
+    else
+        jq -r '.images_urls[]?' < "$1" | while IFS= read -r image_url; do
+            echo "$image_url" >> "${PERSISTENT_STORE}/${application_name}/images/urls"
+        done
+    fi
     # we should check if the app is healthy and alive, then decide what to do
     # at the moment we assume it is alive and ok
     if test -d "${PERSISTENT_STORE}/${application_name}-previous/manifests"; then
