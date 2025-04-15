@@ -1,4 +1,29 @@
 ---
+## 1.1.1 - 2025-04-15
+
+
+### Bug Fixes
+
+
+- Fix stopping of previously installed artifact
+ ([77ac083](https://github.com/mendersoftware/app-update-module/commit/77ac083e073e9df9bb8afa7449ca7d1e2f994899))  by @paulkre
+
+
+  This commit addresses a bug that was causing installation failures when
+  installing a new artifact. The issue stemmed from attempting to stop the
+  previously installed artifact by checking for the existence of its "manifests"
+  directory. However, if the previous installation failed before creating the
+  "manifests" directory, the `STOP` operation would fail. This commit modifies
+  the condition for executing the `STOP` operation to now check for the existence
+  of the "manifests" directory itself, rather than its parent directory. This
+  adjustment ensures that the `STOP` operation is only performed when the
+  "manifests" directory actually exists.
+
+
+
+
+
+
 ## 1.1.0 - 2024-09-17
 
 
