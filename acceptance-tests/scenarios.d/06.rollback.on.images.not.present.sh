@@ -65,14 +65,23 @@ function test_phase_run_rollback_on_images_not_present() {
         --platform linux/amd64 \
         --orchestrator docker-compose \
         --manifests-dir acceptance-tests/data/manifests-1-broken \
-        --application-name myapp0b || return 1
-    echo "images_not_present: checking install rc"
-    mender install "$artifact_file" && return 2 # we expect a failure
-    sleep $timeout_s
-    echo "images_not_present: checking for running containers"
-    docker ps
-    diff "${temp_dir}/before-rollback-$$" <(docker ps --format '{{.Image}}')
-    return 0
+        --application-name myapp0b # we expect a failure here now as we are using docker-compose to pull the images now
+    
+    if [ $? -ne 0 ]; then
+        echo "images_not_present: app-gen artifact generation failed which is expected"
+        return 0
+    else
+        echo "Unexpected success, we were expecting failure"
+        return 1
+    fi
+    
+    # echo "images_not_present: checking install rc"
+    # mender install "$artifact_file" && return 2 # we expect a failure
+    # sleep $timeout_s
+    # echo "images_not_present: checking for running containers"
+    # docker ps
+    # diff "${temp_dir}/before-rollback-$$" <(docker ps --format '{{.Image}}')
+    # return 0
 }
 
 function test_failed_hook_phase_run_rollback_on_images_not_present() {
