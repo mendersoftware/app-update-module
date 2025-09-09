@@ -45,7 +45,7 @@ cd "$temp_dir"
 mkdir "${artifact_name}"
 cd "${artifact_name}"
 tar xvf "$artifact_file"
-tar zxvf header.tar.gz
+tar xvf header.tar
 cat headers/0000/meta-data | jq .
 cat "$expected_meta_file" | jq .
 # we compare the metadata from artifact with the expected one.
