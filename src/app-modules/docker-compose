@@ -318,7 +318,7 @@ case "$1" in
     ROLLBACK)
         shift
         app_stop "$1" "$3" || exit $?
-        app_rollout "$1" "$3"
+        app_rollout "$1" "$2"
         ;;
     PURGE)
         true
