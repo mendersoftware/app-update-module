@@ -71,7 +71,7 @@ docker volume rm $(docker volume ls -q) || true
 artifact_dir="${temp_dir}/${artifact_name}"
 mkdir -p "${artifact_dir}"
 tar xvf "${artifact_file}" -C "${artifact_dir}"
-tar xvzf "${artifact_dir}"/data/0000.tar.gz -C "${artifact_dir}"
+tar xvf "${artifact_dir}"/data/0000.tar -C "${artifact_dir}"
 tar xvzf "${artifact_dir}"/images.tar.gz -C "${artifact_dir}"
 
 # lets find the postgres:15.1 image

@@ -570,6 +570,7 @@ cp -a "${manifests_dir}" "${temp_dir}/manifests"
 generate_metadata "${temp_dir}/metadata.json"
 
 mender-artifact write module-image \
+    --compression none \
     -T app \
     "${device_types[@]}" \
     -o "$output_path" \
