@@ -40,6 +40,9 @@ test:smoketests:
       alias: docker
   before_script:
     - apk --update --no-cache add bash gawk curl aws-cli tree xz jq wget xdelta3 openssl1.1-compat gcompat
+    - wget https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64 -O yq
+    - chmod +x yq
+    - mv yq /usr/local/bin
   script:
     - ./tests/app/run.sh
     - ./tests/gen/run.sh
@@ -75,6 +78,9 @@ test:acceptancetests:
     - curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
     - chmod +x ./kubectl
     - mv ./kubectl /usr/bin/kubectl
+    - wget https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64 -O yq
+    - chmod +x yq
+    - mv yq /usr/local/bin
 
   script:
     - ./acceptance-tests/run.sh

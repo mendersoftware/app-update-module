@@ -12,6 +12,8 @@ services:
             - "65536"
     db:
         image: docker.io/library/memcached:1.6.18-alpine
+        # this images doesn't have the support for linux/arm/v7, test case failes for as we are passing platform 01_deep_delta_generate.run.sh
+        platform: linux/amd64
         networks:
             - local_net
         environment:
